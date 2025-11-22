@@ -1,0 +1,269 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>Inside C++ - Danish Javed</title>
+    <meta name="author" content="Danish Javed">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="../stylesheet.css">
+    <style>
+        body {
+            font-family: 'Lato', Verdana, Helvetica, sans-serif;
+            line-height: 1.6;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #1772d0;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #1772d0;
+            margin-top: 30px;
+        }
+        h3 {
+            color: #444;
+            margin-top: 20px;
+        }
+        h4 {
+            color: #555;
+            margin-top: 15px;
+        }
+        pre {
+            background-color: #f4f4f4;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            border-left: 3px solid #1772d0;
+        }
+        code {
+            background-color: #f4f4f4;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        .back-link {
+            margin-bottom: 20px;
+        }
+        .back-link a {
+            color: #1772d0;
+            text-decoration: none;
+        }
+        .back-link a:hover {
+            color: #f09228;
+        }
+        ul, ol {
+            margin: 15px 0;
+            padding-left: 30px;
+        }
+        li {
+            margin: 8px 0;
+        }
+        .highlight {
+            background-color: #ffffd0;
+            padding: 2px 5px;
+        }
+        .note {
+            background-color: #e8f4f8;
+            border-left: 4px solid #1772d0;
+            padding: 15px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="back-link">
+        <a href="../index.html">← Back to Homepage</a>
+    </div>
+
+    <h1>Inside C++</h1>
+    <p><em>Virtual Functions and Compiler Optimizations</em></p>
+
+    <h2>Virtual Functions</h2>
+    <p>Virtual functions are used for dynamic polymorphism of functions defined in both base and derived classes, whereby the correct function is chosen based on which class a class pointer is pointing to. Without the virtual keyword, always the base class function is chosen when both base class and derived class contain the same named functions.</p>
+
+    <p>Virtual keyword is written before the function prototype in the base class and <code>override</code> keyword is written after the function prototype in the derived classes.</p>
+
+    <h3>Without Virtual Functions</h3>
+    <pre><code>class Animal {
+public:
+    void sound() {
+        cout &lt;&lt; "Animal sound\n";
+    }
+};
+
+class Dog : public Animal {
+public:
+    void sound() {
+        cout &lt;&lt; "Dog barks\n";
+    }
+};
+
+int main() {
+    Animal* a;  // Declare a pointer to the base class (Animal)
+    Dog d;      // Create an object of the derived class (Dog)
+    a = &d;     // Point the base class pointer to the Dog object
+    a-&gt;sound(); // Call the sound() function using the pointer. Since
+                // sound() is not virtual, this calls Animal's version
+    return 0;
+}</code></pre>
+
+    <h3>With Virtual Functions</h3>
+    <pre><code>class Animal {
+public:
+    virtual void sound() {
+        cout &lt;&lt; "Animal sound\n";
+    }
+};
+
+class Dog : public Animal {
+public:
+    void sound() override {
+        cout &lt;&lt; "Dog barks\n";
+    }
+};
+
+int main() {
+    Animal* a;
+    Dog d;
+    a = &d;
+    a-&gt;sound();  // Outputs: Dog barks
+    return 0;
+}</code></pre>
+
+    <h2>Downside of Virtual Functions</h2>
+    <p>Since the compiler (gcc or clang) can't determine at compile time which function to execute, because virtual functions enforce dynamic polymorphism, therefore the compilers can't apply compiler optimizations on the virtual functions leading to slower code. This leads us to several related topics:</p>
+
+    <ol>
+        <li><strong>How does the compiler perform runtime resolution?</strong><br>
+        <a href="https://www.geeksforgeeks.org/cpp/virtual-function-cpp/" target="_blank">GeeksforGeeks: Virtual Functions in C++</a></li>
+
+        <li><strong>What are the various compiler optimizations?</strong><br>
+        <a href="https://queue.acm.org/detail.cfm?id=3372264" target="_blank">ACM Queue: Compiler Optimizations</a></li>
+
+        <li><strong>What is the difference between GCC and Clang compilers?</strong><br>
+        <a href="https://alibabatech.medium.com/gcc-vs-clang-llvm-an-in-depth-comparison-of-c-c-compilers-899ede2be378" target="_blank">GCC vs Clang/LLVM Comparison</a></li>
+    </ol>
+
+    <h2>What Are the Various Compiler Optimizations?</h2>
+    <p>First things first, compiler optimizations only make sense for compiled languages and not interpreted languages like Python. Let's first make sense of the differences between a compiler and an interpreter right before we delve deep into the topic.</p>
+
+    <div class="note">
+        <strong>Compiler vs. Interpreter:</strong> A compiler compiles the entire code into machine code in one go while an interpreter converts the code one line by line. Also, interpreters do not replace compilation completely. Compilers can contain interpreters for performance reasons and smaller memory footprint.
+    </div>
+
+    <p><strong>Examples of compiled languages:</strong> C, C++, C#, Go, Rust, and Swift. Some languages, like Java and Python, are both compiled and interpreted.</p>
+
+    <h3>Viewing Assembly Code</h3>
+    <p>This command compiles C++ code and displays the resulting assembly code in a readable format:</p>
+    <pre><code>$ g++ /tmp/test.cc -O2 -c -S -o - -masm=intel \
+  | c++filt \
+  | grep -vE '\s+\.'</code></pre>
+
+    <h4>Command Breakdown:</h4>
+    <ol>
+        <li><code>g++ /tmp/test.cc -O2 -c -S -o -</code> — Compiles the C++ file with optimization level 2, stops before linking (-c), and outputs assembly code (-S) to stdout (-o -).</li>
+
+        <li><code>c++filt</code> — Demangles C++ symbol names, converting mangled names like <code>_ZN3std...</code> into readable names like <code>std::vector&lt;int&gt;</code>.</li>
+
+        <li><code>grep -vE '\s+\.'</code> — Filters out lines that start with whitespace followed by a dot (these are typically assembler directives like .section, .align, .cfi_* that clutter the output).</li>
+
+        <li><code>-masm=intel</code> — Uses Intel syntax for assembly (rather than AT&T syntax).</li>
+    </ol>
+
+    <div class="note">
+        <p><strong>Note:</strong> All the assembly code shown here is for 64-bit x86 processors. Only Clang and GCC compilers are covered, but equally clever optimizations show up in Visual Studio and Intel compilers.</p>
+    </div>
+
+    <h2>1. Function Inlining</h2>
+    <p>Compiler inlining is one such way to optimize compiler performance where the call to a function is replaced by the entire body of the function. Let's see an example:</p>
+
+    <pre><code>int count(const vector&lt;int&gt; &vec)
+{
+    int numPassed = 0;
+    for (size_t i = 0; i &lt; vec.size(); ++i)
+    {
+        if (testFunc(vec[i]))
+            numPassed++;
+    }
+    return numPassed;
+}</code></pre>
+
+    <p>If the compiler has no information about <code>testFunc</code>, it will generate an inner loop like this:</p>
+
+    <pre><code>.L4:
+    mov edi, DWORD PTR [rdx+rbx*4]  ; read rbx'th element of vec
+                                     ; (inlined vector::operator [])
+    call testFunc(int)               ; call test function
+    mov rdx, QWORD PTR [rbp+0]       ; reread vector base pointer
+    cmp al, 1                        ; was the result of test true?
+    mov rax, QWORD PTR [rbp+8]       ; reread the vector end pointer
+    sbb r12d, -1                     ; add 1 if true, 0 if false
+    inc rbx                          ; increment loop counter
+    sub rax, rdx                     ; subtract end from begin...
+    sar rax, 2                       ; and divide by 4 to get size()
+                                     ; (inlined vector::size())
+    cmp rbx, rax                     ; does loop counter equal size()?
+    jb .L4                           ; loop if not</code></pre>
+
+    <h3>Understanding std::vector Memory Layout</h3>
+    <p>To understand this code, it's useful to know that a <code>std::vector&lt;&gt;</code> contains some pointers:</p>
+    <ul>
+        <li>One to the beginning of the data</li>
+        <li>One to the end of the data</li>
+        <li>One to the end of the storage currently allocated</li>
+    </ul>
+
+    <p>The size of the vector is not directly stored; it's implied in the difference between the <code>begin()</code> and <code>end()</code> pointers. Note that the calls to <code>vector&lt;&gt;::size()</code> and <code>vector&lt;&gt;::operator[]</code> have been inlined completely.</p>
+
+    <h2>Const and Constexpr</h2>
+    <p>Using <code>const</code> in C++ provides several important benefits:</p>
+
+    <h3>1. Safety and Correctness</h3>
+    <p><code>const</code> helps catch bugs at compile time. If you accidentally try to modify something you shouldn't, the compiler will stop you before the code even runs. This prevents entire categories of mistakes.</p>
+
+    <h3>2. Intent and Documentation</h3>
+    <p>When you mark something <code>const</code>, you're explicitly telling other developers (and your future self) what can and can't be modified. This makes code easier to understand and reason about. Someone reading <code>const int* ptr</code> immediately knows they can't change what ptr points to.</p>
+
+    <h3>3. Enables Compiler Optimizations</h3>
+    <p>The compiler can make stronger assumptions about <code>const</code> data. Since it knows a value won't change, it can optimize more aggressively—reusing values, eliminating redundant checks, or moving computations around.</p>
+
+    <h3>4. Allows Calling Functions on Const Objects</h3>
+    <p>If you have a <code>const</code> object, you can only call <code>const</code> member functions on it. This forces a clear separation between functions that modify state and those that don't. Without <code>const</code> functions, you couldn't use many objects as <code>const</code> in the first place.</p>
+
+    <h3>5. Thread Safety Reasoning</h3>
+    <p><code>const</code> helps reason about thread safety. If data is <code>const</code>, multiple threads can safely access it simultaneously without synchronization, since nothing is modifying it.</p>
+
+    <h3>6. API Contracts</h3>
+    <p>When a function takes a <code>const</code> reference parameter, it guarantees to callers that the function won't modify that argument. This is a contract that makes APIs clearer and more predictable.</p>
+
+    <h3>7. Prevents Accidental Modifications</h3>
+    <p>Even in your own code, <code>const</code> acts as a guardrail. It's easy to accidentally modify something when you're in a rush or tired—<code>const</code> prevents these mistakes.</p>
+
+    <div class="note">
+        <strong>Conclusion:</strong> In general, using <code>const</code> liberally throughout your code <span class="highlight">makes it safer, clearer, and often faster</span>.
+    </div>
+
+    <h2>Key Takeaways</h2>
+    <ul>
+        <li><strong>Virtual functions</strong> enable polymorphism but prevent certain compiler optimizations</li>
+        <li><strong>Function inlining</strong> can significantly improve performance by eliminating function call overhead</li>
+        <li><strong>const</strong> provides safety, documentation, optimization opportunities, and thread safety benefits</li>
+        <li>Understanding assembly output helps you reason about compiler optimizations</li>
+        <li>GCC and Clang both perform sophisticated optimizations at higher optimization levels (-O2, -O3)</li>
+    </ul>
+
+    <h2>Further Reading</h2>
+    <ul>
+        <li><a href="https://www.geeksforgeeks.org/cpp/virtual-function-cpp/" target="_blank">Virtual Functions in C++ - GeeksforGeeks</a></li>
+        <li><a href="https://queue.acm.org/detail.cfm?id=3372264" target="_blank">Compiler Optimizations - ACM Queue</a></li>
+        <li><a href="https://alibabatech.medium.com/gcc-vs-clang-llvm-an-in-depth-comparison-of-c-c-compilers-899ede2be378" target="_blank">GCC vs Clang/LLVM Comparison</a></li>
+    </ul>
+
+    <div class="back-link" style="margin-top: 40px;">
+        <a href="../index.html">← Back to Homepage</a>
+    </div>
+</body>
+</html>

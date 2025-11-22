@@ -1,0 +1,566 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>Inside Python - Danish Javed</title>
+    <meta name="author" content="Danish Javed">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="../stylesheet.css">
+    <style>
+        body {
+            font-family: 'Lato', Verdana, Helvetica, sans-serif;
+            line-height: 1.6;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #1772d0;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #1772d0;
+            margin-top: 30px;
+        }
+        h3 {
+            color: #444;
+            margin-top: 20px;
+        }
+        pre {
+            background-color: #f4f4f4;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        code {
+            background-color: #f4f4f4;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        .back-link {
+            margin-bottom: 20px;
+        }
+        .back-link a {
+            color: #1772d0;
+            text-decoration: none;
+        }
+        .back-link a:hover {
+            color: #f09228;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+    </style>
+</head>
+<body>
+    <div class="back-link">
+        <a href="../index.html">← Back to Homepage</a>
+    </div>
+
+    <h1>Inside Python</h1>
+    <p><em>Modules, Lambdas, Decorators, Iterators and Regular Expressions</em></p>
+
+    <h2>1. Modules</h2>
+    <p>Each file in python is referred to as a module which can be imported in a different file.</p>
+
+    <p><strong>Import fibo</strong> imports all functions from the <code>fibo.py</code> file and we can use functions from the file by prefixing with the fibo. file name such as <code>fibo.fib1(1)</code></p>
+
+    <pre><code>&gt;&gt;&gt;fibo.__name__
+'Fibo'</code></pre>
+
+    <p>which indicates fibo is not the main file but it is the imported file.</p>
+
+    <p><strong>from fibo import *</strong> imports all functions from <code>fibo.py</code> and we can use functions from the file without prefixing with any prefix</p>
+
+    <h3>Package Example</h3>
+    <p>For example here:-<br>
+    We can import as</p>
+    <pre><code>&gt; from . import echo
+&gt; from .. import formats
+&gt; from ..filters import equalizer</code></pre>
+
+    <pre><code>sound/                      Top-level package
+    __init__.py             Initialize the sound package
+    formats/                Subpackage for file format conversions
+        __init__.py
+        wavread.py
+        wavwrite.py
+        aiffread.py
+        aiffwrite.py
+        auread.py
+        auwrite.py
+        ...
+    effects/                Subpackage for sound effects
+        __init__.py
+        echo.py
+        surround.py
+        reverse.py
+        ...
+    filters/                Subpackage for filters
+        __init__.py
+        equalizer.py
+        vocoder.py
+        karaoke.py
+        ...</code></pre>
+
+    <h3>The dir() Function</h3>
+    <p>The built-in function <code>dir()</code> is used to find out which names a module defines. It returns a sorted list of strings:</p>
+
+    <pre><code>import fibo, sys
+dir(fibo)
+['__name__', 'fib', 'fib2']</code></pre>
+
+    <p>The <code>dir()</code> function in Python lists all the attributes and methods available for an object. It's a helpful tool for exploration and debugging.</p>
+
+    <h4>Basic usage:</h4>
+    <pre><code># List attributes of a string
+dir("hello")
+
+# List attributes of a list
+dir([1, 2, 3])
+
+# List attributes of a custom object
+class MyClass:
+    def __init__(self):
+        self.value = 42
+
+    def my_method(self):
+        pass
+
+obj = MyClass()
+dir(obj)</code></pre>
+
+    <h4>What it returns:</h4>
+    <p><code>dir()</code> returns a list of strings representing attribute and method names. This includes built-in methods (like <code>__init__</code>, <code>__str__</code>), user-defined methods, and properties.</p>
+
+    <h4>Common use cases:</h4>
+
+    <p><strong>Exploring objects.</strong> When you're working with an unfamiliar library or object, <code>dir()</code> shows you what you can do with it.</p>
+    <pre><code>import math
+dir(math)  # See all available functions in the math module</code></pre>
+
+    <p><strong>Finding available methods.</strong> Quickly check what methods are available on a string, list, or other object without looking at documentation.</p>
+    <pre><code>s = "hello"
+print(dir(s))  # Shows methods like upper(), lower(), split(), etc.</code></pre>
+
+    <p><strong>Debugging.</strong> When something isn't working as expected, <code>dir()</code> helps you verify that an attribute or method actually exists.</p>
+
+    <h2>@staticmethod and @classmethod in Python</h2>
+    <p>These are decorators that define how methods behave in relation to the class and its instances.</p>
+
+    <h3>@staticmethod</h3>
+    <p>A static method doesn't receive the class or instance as an argument. It's basically a regular function that happens to live inside a class namespace.</p>
+
+    <pre><code>class MyClass:
+    @staticmethod
+    def static_method(x, y):
+        return x + y
+
+# Call it on the class or instance - doesn't matter
+MyClass.static_method(3, 5)  # Returns 8
+obj = MyClass()
+obj.static_method(3, 5)  # Also returns 8</code></pre>
+
+    <p>Use static methods when you have utility functions related to the class but that don't need access to instance or class data.</p>
+
+    <h3>@classmethod</h3>
+    <p>A class method receives the class itself as the first argument (conventionally named <code>cls</code>). It can access and modify class-level data.</p>
+
+    <pre><code>class MyClass:
+    count = 0
+
+    def __init__(self):
+        MyClass.count += 1
+
+    @classmethod
+    def get_count(cls):
+        return cls.count
+
+obj1 = MyClass()
+obj2 = MyClass()
+MyClass.get_count()  # Returns 2</code></pre>
+
+    <p>Class methods are commonly used for alternative constructors or operations that affect the entire class.</p>
+
+    <h3>Quick Comparison</h3>
+    <table>
+        <tr>
+            <th>Feature</th>
+            <th>Instance Method</th>
+            <th>@staticmethod</th>
+            <th>@classmethod</th>
+        </tr>
+        <tr>
+            <td>First argument</td>
+            <td><code>self</code></td>
+            <td>None</td>
+            <td><code>cls</code></td>
+        </tr>
+        <tr>
+            <td>Access instance data</td>
+            <td>Yes</td>
+            <td>No</td>
+            <td>No</td>
+        </tr>
+        <tr>
+            <td>Access class data</td>
+            <td>Yes</td>
+            <td>No</td>
+            <td>Yes</td>
+        </tr>
+        <tr>
+            <td>Can modify class state</td>
+            <td>Yes</td>
+            <td>No</td>
+            <td>Yes</td>
+        </tr>
+    </table>
+
+    <p>Instance methods are the default and most common. Use <code>@staticmethod</code> for utility functions, and <code>@classmethod</code> when you need to work with class-level data or create alternative constructors.</p>
+
+    <h3>What will happen if I pass self as an argument in static method?</h3>
+    <p>If you pass <code>self</code> as an argument to a static method, it will just be treated as a regular parameter—nothing special happens. The decorator doesn't enforce anything; it just changes how the method is called.</p>
+
+    <pre><code>class MyClass:
+    @staticmethod
+    def static_method(self, x):
+        print(f"self: {self}, x: {x}")
+
+obj = MyClass()
+# You have to manually pass self
+obj.static_method(obj, 5)  # Prints: self: &lt;__main__.MyClass object at ...&gt;, x: 5
+
+# Or pass anything else
+MyClass.static_method("hello", 5)  # Prints: self: hello, x: 5</code></pre>
+
+    <p><strong>In short:</strong> with <code>@staticmethod</code>, <code>self</code> becomes just another regular parameter you have to pass manually. It's not automatically bound like it is with instance methods. This is why static methods are generally pointless if you're planning to pass <code>self</code>—you'd just want a regular instance method instead.</p>
+
+    <h2>Other Common Decorators in Python</h2>
+
+    <h3>@property</h3>
+    <p>Lets you access a method like an attribute without calling it.</p>
+    <pre><code>class Person:
+    def __init__(self, name):
+        self._name = name
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, value):
+        self._name = value
+
+p = Person("Alice")
+print(p.name)  # Calls the getter, prints "Alice"
+p.name = "Bob"  # Calls the setter</code></pre>
+
+    <h3>@functools.wraps</h3>
+    <p>Used when creating wrapper functions or decorators. Preserves the original function's metadata.</p>
+    <pre><code>import functools
+
+def my_decorator(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        print("Before")
+        return func(*args, **kwargs)
+    return wrapper
+
+@my_decorator
+def greet(name):
+    """Greets someone"""
+    return f"Hello {name}"
+
+print(greet.__name__)  # Prints "greet" (not "wrapper")</code></pre>
+
+    <h3>@abstractmethod</h3>
+    <p>Used in abstract base classes to define methods subclasses must implement.</p>
+    <pre><code>from abc import ABC, abstractmethod
+
+class Animal(ABC):
+    @abstractmethod
+    def make_sound(self):
+        pass
+
+class Dog(Animal):
+    def make_sound(self):
+        return "Woof"</code></pre>
+
+    <h3>@deprecated</h3>
+    <p>Marks a function as deprecated to warn users.</p>
+    <pre><code>import warnings
+
+def deprecated(func):
+    def wrapper(*args, **kwargs):
+        warnings.warn(f"{func.__name__} is deprecated", DeprecationWarning)
+        return func(*args, **kwargs)
+    return wrapper
+
+@deprecated
+def old_function():
+    pass</code></pre>
+
+    <h3>@timing</h3>
+    <p>A custom decorator example for measuring execution time.</p>
+    <pre><code>import time
+import functools
+
+def timing(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        start = time.time()
+        result = func(*args, **kwargs)
+        print(f"{func.__name__} took {time.time() - start:.4f}s")
+        return result
+    return wrapper
+
+@timing
+def slow_function():
+    time.sleep(1)</code></pre>
+
+    <h2>Virtual Functions in C++ (Python Equivalent)</h2>
+    <p>In Python, the equivalent of virtual functions in C++ are simply methods that can be overridden in subclasses — because all methods in Python are virtual by default.</p>
+
+    <pre><code>class Base:
+    def speak(self):
+        print("Base speaking")
+
+class Derived(Base):
+    def speak(self):
+        print("Derived speaking")
+
+obj = Derived()
+obj.speak()  # Derived speaking</code></pre>
+
+    <h3>To enforce overriding (optional)</h3>
+    <p>If you want to make a method <em>must be overridden</em> (like a pure virtual function in C++), you can use Python's <code>abc</code> (Abstract Base Class) module.</p>
+
+    <h2>What is Python's Abstract Base Class Module (ABC)?</h2>
+    <p>How to import?</p>
+    <pre><code>from abc import ABC, abstractmethod
+
+class Base(ABC):
+    @abstractmethod
+    def speak(self):
+        pass
+
+class Derived(Base):
+    def speak(self):
+        print("Derived speaking")
+
+obj = Derived()
+obj.speak()  # Prints Derived speaking</code></pre>
+
+    <h3>What is an ABC?</h3>
+    <p>An abstract base class is a class that cannot be instantiated directly. It exists to be inherited from, and it defines methods that subclasses must implement. Think of it as a contract—"if you inherit from me, you must implement these methods."</p>
+
+    <pre><code>from abc import ABC, abstractmethod
+
+class Animal(ABC):
+    @abstractmethod
+    def make_sound(self):
+        pass
+
+    @abstractmethod
+    def move(self):
+        pass
+
+    def describe(self):
+        return "This is an animal"
+
+# This raises TypeError - can't instantiate abstract class
+# animal = Animal()
+
+class Dog(Animal):
+    def make_sound(self):
+        return "Woof"
+
+    def move(self):
+        return "Running on four legs"
+
+# This works - all abstract methods implemented
+dog = Dog()
+print(dog.make_sound())  # Woof</code></pre>
+
+    <h3>If you try to create a subclass without implementing all abstract methods, you get an error:</h3>
+    <pre><code>class Incomplete(Animal):
+    def make_sound(self):
+        return "Some sound"
+    # Forgot to implement move()
+
+# TypeError: Can't instantiate abstract class Incomplete
+# with abstract method move
+incomplete = Incomplete()</code></pre>
+
+    <h2>Understanding Sample Code</h2>
+
+    <h3>Example 1</h3>
+    <pre><code>class TimestampExtension:
+    """An implementation of the Timestamp extension.
+
+    This extension implementation illustrates several ways for an extension to
+    provide functionality to agent developers. In general, the support methods
+    range from totally hands off, where all responsibility for using the
+    extension correctly is left to the developer, to totally hands-on, where
+    the developer sets up strategic decorators for core classes which then
+    manage implementing the extension logic. Each of the methods have comments
+    indicating the level of support they provide.
+    """
+
+    def __init__(self, now_fn: Callable[[], float] | None = None):
+        self._now_fn = now_fn or time.time</code></pre>
+
+    <h4>What does the above code mean?</h4>
+
+    <p><strong>Line 1:</strong> <code>def __init__(self, now_fn: Callable[[], float] | None = None):</code></p>
+    <p>This is the constructor method with one parameter:</p>
+    <ul>
+        <li><code>now_fn: Callable[[], float] | None = None</code> - This parameter has several parts:
+            <ul>
+                <li><code>Callable[[], float]</code> - Type annotation indicating now_fn should be a callable (function) that:
+                    <ul>
+                        <li>Takes no arguments (the empty [])</li>
+                        <li>Returns a float value</li>
+                        <li>Example: time.time is a perfect match - it takes no args and returns a float timestamp</li>
+                    </ul>
+                </li>
+                <li><code>| None</code> - Union type operator (Python 3.10+) meaning the parameter can be either Callable[[], float] or None</li>
+                <li><code>= None</code> - Default value, so this parameter is optional. If not provided, it defaults to None</li>
+            </ul>
+        </li>
+    </ul>
+
+    <p><strong>Line 2:</strong> <code>self._now_fn = now_fn or time.time</code></p>
+    <p>This uses Python's "or" operator for default value pattern:</p>
+    <ul>
+        <li>If now_fn is provided (truthy): self._now_fn gets the custom function</li>
+        <li>If now_fn is None (falsy): self._now_fn gets time.time as the default</li>
+    </ul>
+    <p>Note that time.time here is the function object itself, not a call to it (no parentheses).</p>
+
+    <h4>Why This Pattern?</h4>
+    <p>This is dependency injection for testability:</p>
+    <ul>
+        <li>In production: use default time.time for real timestamps</li>
+        <li>In tests: inject a mock function to control what "now" returns (e.g., lambda: 1234567890.0)</li>
+    </ul>
+    <p>This makes the code easier to test because you can control time behavior without monkey-patching.</p>
+
+    <h3>Example 2 - Leading Underscore</h3>
+    <p><strong>What does the leading underscore mean here?</strong></p>
+    <pre><code>class _TimestampingAgentExecutor(AgentExecutor):</code></pre>
+
+    <p>The leading underscore (_) in class <code>_TimestampingAgentExecutor</code> is a Python naming convention that indicates this class is intended to be private or internal to the module.</p>
+
+    <h4>What it means:</h4>
+    <ol>
+        <li><strong>Private/Internal API:</strong> The underscore signals "this is an implementation detail, not part of the public API"</li>
+        <li><strong>Not imported with *:</strong> If someone does <code>from timestamp_ext import *</code>, classes/functions starting with _ are not imported (they're excluded by default)</li>
+        <li><strong>Convention, not enforcement:</strong> Python doesn't truly enforce privacy - you can still access _TimestampingAgentExecutor from outside the module if you really want to. It's a "gentleman's agreement" that says "don't use this directly"</li>
+    </ol>
+
+    <h4>Can we call such a class from outside the module?</h4>
+    <p>Yes, absolutely! You can call/access <code>_TimestampingAgentExecutor</code> from outside the module.</p>
+    <p>Python's Privacy is Just Convention. The leading underscore is a convention, not an enforcement mechanism. Python doesn't have true private members like Java or C++.</p>
+
+    <pre><code># From another module/file:
+from timestamp_ext import _TimestampingAgentExecutor  # This works!
+
+# Or:
+import timestamp_ext
+executor = timestamp_ext._TimestampingAgentExecutor(...)  # Also works!</code></pre>
+
+    <h4>Why use the underscore then?</h4>
+    <p>It's a social contract that communicates:</p>
+    <ul>
+        <li>"This is internal implementation - I might change or remove it without warning"</li>
+        <li>"Don't depend on this - use the public API instead"</li>
+        <li>Helps IDEs and linters warn you: "Hey, you're using something marked as private"</li>
+    </ul>
+
+    <p><strong>Bottom line:</strong> The underscore is like a "Caution" sign, not a locked door. You can access it, but the author is saying "you probably shouldn't, and if you do, don't complain if it breaks later."</p>
+
+    <h3>Example 3 - __all__</h3>
+    <pre><code>__all__ = [
+    'TIMESTAMP_FIELD',
+    'URI',
+    'MessageTimestamper',
+    'TimestampExtension',
+]</code></pre>
+
+    <p><strong>What does the above code mean?</strong></p>
+    <p>This defines what gets imported when someone uses <code>from module import *</code></p>
+
+    <h4>What EXISTS in the module vs. What WILDCARD IMPORT gives you:</h4>
+    <pre><code>from timestamp_ext import *
+
+# Only these 4 items (defined in __all__):
+TIMESTAMP_FIELD  # ✅
+URI              # ✅
+MessageTimestamper   # ✅
+TimestampExtension   # ✅
+
+# NOT imported (not in __all__):
+_TimestampingAgentExecutor      # ❌
+_TimestampingEventQueue         # ❌
+_TimestampClientFactory         # ❌
+_CORE_PATH                      # ❌
+_MESSAGING_METHODS              # ❌</code></pre>
+
+    <h3>Example 4 - Context Managers (__enter__ and __exit__)</h3>
+    <p>The <code>__enter__</code> and <code>__exit__</code> dunder methods implement Python's context manager protocol, enabling a class to be used with the <code>with</code> statement.</p>
+
+    <pre><code>def __enter__(self) -> TraceRecord:
+    """Context manager entry point that returns the trace step."""
+    return self.step
+
+def __exit__(
+    self,
+    exc_type: type[BaseException] | None,
+    exc_val: BaseException | None,
+    exc_traceback: types.TracebackType | None,
+) -> bool:
+    """Context manager exit point that finalizes the trace step."""
+    error_msg = None
+    if exc_type:
+        error_msg = ''.join(
+            exc_traceback.format_exception(exc_type, exc_val, exc_traceback)
+        )
+    self.step.end_step(error=error_msg)
+    if self.response_trace:
+        self.response_trace.add_step(self.step)
+    # Do not suppress exceptions
+    return False</code></pre>
+
+    <h4>How they work:</h4>
+    <ul>
+        <li><strong>__enter__</strong> - Called when entering the with block; Returns self.step (a TraceRecord object) which becomes available via the as clause</li>
+        <li><strong>__exit__</strong> - Called when exiting the with block (whether normally or due to exception); Handles exceptions, finalizes the trace, and returns False (exceptions are not suppressed)</li>
+    </ul>
+
+    <h4>Usage Example:</h4>
+    <pre><code>with SomeClass(...) as trace_record:
+    # __enter__() is called, returns self.step
+    # You can use trace_record here
+    do_something()
+# __exit__() is called here, recording end time and any errors</code></pre>
+
+    <p>This pattern ensures that trace steps are properly started and ended with accurate timing and error information, even if exceptions occur during execution.</p>
+
+    <div class="back-link" style="margin-top: 40px;">
+        <a href="../index.html">← Back to Homepage</a>
+    </div>
+</body>
+</html>
