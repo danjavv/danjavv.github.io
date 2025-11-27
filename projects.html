@@ -1,0 +1,194 @@
+<!DOCTYPE HTML>
+<html lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+    <title>Projects - Danish Javed</title>
+
+    <meta name="author" content="Danish Javed">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="shortcut icon" href="images/favicon/favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" type="text/css" href="stylesheet.css">
+
+  </head>
+
+  <body>
+    <table style="width:100%;max-width:800px;border:0px;border-spacing:0px;border-collapse:separate;margin-right:auto;margin-left:auto;"><tbody>
+      <tr style="padding:0px">
+        <td style="padding:0px">
+          <table style="width:100%;border:0px;border-spacing:0px;border-collapse:separate;margin-right:auto;margin-left:auto;"><tbody>
+            <tr style="padding:0px">
+              <td style="padding:2.5%;width:100%;vertical-align:middle">
+                <p style="text-align:center">
+                  <a href="index.html">Home</a> &nbsp;/&nbsp;
+                  <a href="work-experience.html">Work Experience</a> &nbsp;/&nbsp;
+                  <a href="projects.html">Projects</a> &nbsp;/&nbsp;
+                  <a href="blog.html">Blog</a> &nbsp;/&nbsp;
+                  <a href="miscellanea.html">Miscellanea</a>
+                </p>
+              </td>
+            </tr>
+          </tbody></table>
+
+          <table style="width:100%;border:0px;border-spacing:0px;border-collapse:separate;margin-right:auto;margin-left:auto;"><tbody>
+              <tr>
+              <td style="padding:16px;width:100%;vertical-align:middle">
+                <h2>Projects</h2>
+                <p>
+                  Here are some of my projects covering areas like rendering, simulation, and application development. Some projects are <span class="highlight">highlighted</span>.
+                </p>
+              </td>
+            </tr>
+          </tbody></table>
+          <table style="width:100%;border:0px;border-spacing:0px 10px;border-collapse:separate;margin-right:auto;margin-left:auto;"><tbody>
+
+<tr onmouseout="raytracer_stop()" onmouseover="raytracer_start()" bgcolor="#ffffd0">
+      <td style="padding:16px;width:20%;vertical-align:middle">
+        <div class="one">
+          <div class="two" id='raytracer_image'>
+					  <img src='images/raytracer.jpeg' width=100%>
+					</div>
+          <img src='images/raytracer.jpeg' width=100%>
+        </div>
+        <script type="text/javascript">
+          function raytracer_start() {
+            document.getElementById('raytracer_image').style.opacity = "1";
+          }
+
+          function raytracer_stop() {
+            document.getElementById('raytracer_image').style.opacity = "0";
+          }
+          raytracer_stop()
+        </script>
+      </td>
+      <td style="padding:8px;width:80%;vertical-align:middle">
+        <a href="https://github.com/danjavv/RayTracer">
+          <span class="papertitle">RayTracer - Path Tracing Renderer</span>
+        </a>
+        <br>
+        <strong>Danish Javed</strong>
+        <br>
+        <em>C++, OpenGL, SDL2</em>, 2024
+        <br>
+        <a href="https://github.com/danjavv/RayTracer">GitHub</a>
+        <p></p>
+        <p>
+		A path tracing renderer that creates photorealistic renderings of 3D scenes. Supports multiple geometric primitives (spheres, planes, cuboids), three material types (diffuse, metal, transparent), and advanced light transport effects including soft shadows, recursive reflections/refractions, total internal reflection, indirect illumination, and caustics.
+        </p>
+      </td>
+    </tr>
+
+    <tr onmouseout="cache_stop()" onmouseover="cache_start()">
+      <td style="padding:16px;width:20%;vertical-align:middle">
+        <div class="one">
+          <div class="two" id='cache_image'>
+					  <img src='images/cache.png' width=100%>
+					</div>
+          <img src='images/cache.png' width=100%>
+        </div>
+        <script type="text/javascript">
+          function cache_start() {
+            document.getElementById('cache_image').style.opacity = "1";
+          }
+
+          function cache_stop() {
+            document.getElementById('cache_image').style.opacity = "0";
+          }
+          cache_stop()
+        </script>
+      </td>
+      <td style="padding:8px;width:80%;vertical-align:middle">
+        <a href="https://github.com/danjavv/Cache-Simulator">
+          <span class="papertitle">Cache-Simulator - N-way Set Associative Cache</span>
+        </a>
+        <br>
+        <strong>Danish Javed</strong>
+        <br>
+        <em>C++</em>, 2024
+        <br>
+        <a href="https://github.com/danjavv/Cache-Simulator">GitHub</a>
+        <p></p>
+        <p>
+		An N-way set associative cache simulator modeling a two-level cache hierarchy (L1 and L2). Processes memory access trace files and simulates how requests flow through the cache system to DRAM. Features configurable parameters for block size, cache sizes, and associativity levels, with comprehensive statistics tracking for reads, writes, hits, and misses.
+        </p>
+      </td>
+    </tr>
+
+    <tr onmouseout="darkpools_stop()" onmouseover="darkpools_start()" bgcolor="#ffffd0">
+      <td style="padding:16px;width:20%;vertical-align:middle">
+        <div class="one">
+          <div class="two" id='darkpools_image'>
+					  <img src='images/a2a.png' width=100%>
+					</div>
+          <img src='images/a2a.png' width=100%>
+        </div>
+        <script type="text/javascript">
+          function darkpools_start() {
+            document.getElementById('darkpools_image').style.opacity = "1";
+          }
+
+          function darkpools_stop() {
+            document.getElementById('darkpools_image').style.opacity = "0";
+          }
+          darkpools_stop()
+        </script>
+      </td>
+      <td style="padding:8px;width:80%;vertical-align:middle">
+        <a href="https://github.com/danjavv/DarkPools-A2A">
+          <span class="papertitle">Dark Pools - A2A Multiagent System</span>
+        </a>
+        <br>
+        <strong>Danish Javed</strong>
+        <br>
+        <em>Python, Rust, A2A SDK</em>, 2024
+        <br>
+        <a href="https://github.com/danjavv/DarkPools-A2A">GitHub</a>
+        <p></p>
+        <p>
+		A dark pools trading system demonstrating secure, private equity trading through multiple autonomous agents. Features confidential order matching, real-time market data integration using yfinance, and multi-agent coordination with independent trading logic. Includes Rust backend with relay server and order processing, plus position and balance management for trading participants.
+        </p>
+      </td>
+    </tr>
+
+    <tr onmouseout="ffi_stop()" onmouseover="ffi_start()">
+      <td style="padding:16px;width:20%;vertical-align:middle">
+        <div class="one">
+          <div class="two" id='ffi_image'>
+					  <img src='images/ffi.avif' width=100%>
+					</div>
+          <img src='images/ffi.avif' width=100%>
+        </div>
+        <script type="text/javascript">
+          function ffi_start() {
+            document.getElementById('ffi_image').style.opacity = "1";
+          }
+
+          function ffi_stop() {
+            document.getElementById('ffi_image').style.opacity = "0";
+          }
+          ffi_stop()
+        </script>
+      </td>
+      <td style="padding:8px;width:80%;vertical-align:middle">
+        <a href="https://github.com/danjavv/async-ffi-test">
+          <span class="papertitle">Python FFI for Async Rust Functions</span>
+        </a>
+        <br>
+        <strong>Danish Javed</strong>
+        <br>
+        <em>Python, Rust, Tokio</em>, 2024
+        <br>
+        <a href="https://github.com/danjavv/async-ffi-test">GitHub</a>
+        <p></p>
+        <p>
+		A practical demonstration of creating Python wrappers for asynchronous Rust functions using FFI (Foreign Function Interface). Features C-compatible FFI wrappers that convert async Rust functions into synchronous C exports using Tokio runtime, with examples including async delays, Fibonacci calculation, and error handling. Uses ctypes for Python-Rust library interaction.
+        </p>
+      </td>
+    </tr>
+
+          </tbody></table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
