@@ -64,13 +64,13 @@
 }
 
 a {
-  color: #1772d0;
+  color: var(--link-color);
   text-decoration: none;
 }
 
 a:focus,
 a:hover {
-  color: #f09228;
+  color: var(--link-hover-color);
   text-decoration: none;
 }
 
@@ -131,11 +131,12 @@ h2 {
 }
 
 span.highlight {
-  background-color: #ffffd0;
+  background-color: var(--highlight-bg);
+  color: var(--highlight-text);
 }
 
 .colored-box {
-    color: black;
+    color: var(--text-color);
     padding: 20px;
     display: inline-block;
     border-radius: 10px;

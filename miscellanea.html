@@ -8,6 +8,7 @@
     <meta name="author" content="Danish Javed">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="shortcut icon" href="images/favicon/favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" type="text/css" href="theme.css">
     <link rel="stylesheet" type="text/css" href="stylesheet.css">
 
   </head>
@@ -26,7 +27,8 @@
                   <a href="blog.html">Blog</a> &nbsp;/&nbsp;
                   <a href="miscellanea.html">Miscellanea</a> &nbsp;/&nbsp;
                   <a href="movies-music.html">Movies & Music</a> &nbsp;/&nbsp;
-                  <a href="musings.html">Musings</a>
+                  <a href="musings.html">Musings</a> &nbsp;/&nbsp;
+                  <button id="theme-toggle" class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle dark mode">🌙</button>
                 </p>
               </td>
             </tr>
@@ -42,7 +44,7 @@
           <table style="width:100%;border:0px;border-spacing:0px;border-collapse:separate;margin-right:auto;margin-left:auto;"><tbody>
 
 
-            <tr bgcolor="#f3ffe6">
+            <tr class="highlight-row">
               <td align="center" style="padding:16px;width:20%;vertical-align:middle">
 					     <div class="colored-box" style="background-color: #d7f9db;">
 								 <h2>Certifications</h2>
@@ -85,5 +87,6 @@
         </td>
       </tr>
     </table>
+    <script src="theme-toggle.js"></script>
   </body>
 </html>

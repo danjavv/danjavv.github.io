@@ -1,0 +1,84 @@
+/* Theme Variables */
+:root {
+  /* Light mode colors */
+  --text-color: #000000;
+  --bg-color: #ffffff;
+  --link-color: #1772d0;
+  --link-hover-color: #f09228;
+  --highlight-bg: #ffffd0;
+  --highlight-text: #000000;
+  --border-color: #dddddd;
+  --secondary-text: #333333;
+}
+
+/* Dark mode */
+html.dark-mode {
+  --text-color: #e0e0e0;
+  --bg-color: #1a1a1a;
+  --link-color: #64b5f6;
+  --link-hover-color: #ffb74d;
+  --highlight-bg: #3a3a3a;
+  --highlight-text: #ffffff;
+  --border-color: #444444;
+  --secondary-text: #cccccc;
+}
+
+/* Apply theme colors */
+html {
+  background-color: var(--bg-color);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+body {
+  color: var(--text-color);
+  background-color: var(--bg-color);
+}
+
+/* Theme toggle button */
+.theme-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: inline;
+  font-size: 16px;
+  transition: all 0.3s ease;
+  padding: 0;
+  margin-left: 8px;
+  vertical-align: middle;
+  filter: grayscale(100%) brightness(0);
+}
+
+html.dark-mode .theme-toggle {
+  filter: none;
+}
+
+.theme-toggle:hover {
+  transform: scale(1.2);
+}
+
+.theme-toggle:focus {
+  outline: none;
+}
+
+/* Smooth transitions for theme changes */
+body, a, span, td, p {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Highlighted table rows */
+tr.highlight-row {
+  background-color: var(--highlight-bg) !important;
+}
+
+tr.highlight-row td {
+  color: var(--highlight-text);
+}
+
+/* Colored boxes in dark mode */
+html.dark-mode .colored-box {
+  background-color: var(--highlight-bg) !important;
+}
+
+html.dark-mode .colored-box h2 {
+  color: var(--highlight-text);
+}
