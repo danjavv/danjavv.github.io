@@ -45,11 +45,11 @@ body {
   padding: 0;
   margin-left: 8px;
   vertical-align: middle;
-  filter: grayscale(100%) brightness(0);
+  filter: grayscale(100%) brightness(0.4) sepia(1) hue-rotate(180deg) saturate(5);
 }
 
 html.dark-mode .theme-toggle {
-  filter: none;
+  filter: grayscale(100%) brightness(1.5) sepia(1) hue-rotate(180deg) saturate(3);
 }
 
 .theme-toggle:hover {
