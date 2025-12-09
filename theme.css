@@ -82,3 +82,38 @@ html.dark-mode .colored-box {
 html.dark-mode .colored-box h2 {
   color: var(--highlight-text);
 }
+
+/* Ask Me Anything Form */
+#ama-form input,
+#ama-form textarea {
+  transition: border-color 0.3s ease, background-color 0.3s ease;
+}
+
+#ama-form input:focus,
+#ama-form textarea:focus {
+  outline: none;
+  border-color: var(--link-color);
+}
+
+#ama-form button {
+  transition: background-color 0.3s ease, transform 0.1s ease;
+}
+
+#ama-form button:hover {
+  background-color: var(--link-hover-color);
+  transform: translateY(-1px);
+}
+
+#ama-form button:active {
+  transform: translateY(0);
+}
+
+#form-status.success {
+  color: #28a745;
+  display: block !important;
+}
+
+#form-status.error {
+  color: #dc3545;
+  display: block !important;
+}
