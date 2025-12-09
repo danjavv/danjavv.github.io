@@ -27,8 +27,6 @@
         });
 
         if (response.ok) {
-          status.textContent = 'Thanks for your message! I\'ll get back to you soon.';
-          status.className = 'success';
           form.reset();
         } else {
           throw new Error('Form submission failed');

@@ -82,11 +82,13 @@
     <table style="width:100%;max-width:800px;border:0px;border-spacing:0px;border-collapse:separate;margin-right:auto;margin-left:auto;margin-top:20px;"><tbody>
       <tr>
         <td style="padding:2.5%;width:100%;vertical-align:middle">
-          <form id="ama-form" action="https://formspree.io/f/xanykjpr" method="POST" style="display:flex;gap:10px;align-items:center;">
-            <input type="text" name="message" placeholder="Ask me anything..." required style="flex:1;padding:10px;border:1px solid var(--border-color);border-radius:4px;background-color:var(--bg-color);color:var(--text-color);font-family:inherit;font-size:14px;">
-            <button type="submit" style="padding:10px 20px;background-color:var(--link-color);color:white;border:none;border-radius:4px;cursor:pointer;font-size:14px;font-family:inherit;white-space:nowrap;">Send</button>
+          <form id="ama-form" action="https://api.web3forms.com/submit" method="POST" style="display:flex;gap:10px;align-items:center;">
+            <input type="hidden" name="access_key" value="a6c8a747-ec2b-4d73-a193-e93e499594f9">
+            <input type="text" name="message" placeholder="Ask me anything..." required style="flex:1;padding:6px 10px;border:1px solid var(--border-color);border-radius:4px;background-color:var(--bg-color);color:var(--text-color);font-family:inherit;font-size:14px;">
+            <button type="submit" style="padding:6px 20px;background-color:var(--link-color);color:white;border:none;border-radius:4px;cursor:pointer;font-size:14px;font-family:inherit;white-space:nowrap;">Send</button>
             <p id="form-status" style="position:absolute;text-align:center;margin-top:60px;font-size:14px;display:none;width:100%;"></p>
           </form>
+          <p style="font-size:11px;margin-top:5px;margin-bottom:0;opacity:0.6;">please include your contact details if you want me to get back to you</p>
         </td>
       </tr>
     </tbody></table>
