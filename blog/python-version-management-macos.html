@@ -1,0 +1,419 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>Python Version Management on macOS - Danish Javed</title>
+    <meta name="author" content="Danish Javed">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="../stylesheet.css">
+    <style>
+        body {
+            font-family: 'Lato', Verdana, Helvetica, sans-serif;
+            line-height: 1.6;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #1772d0;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #1772d0;
+            margin-top: 30px;
+        }
+        h3 {
+            color: #444;
+            margin-top: 20px;
+        }
+        h4 {
+            color: #555;
+            margin-top: 15px;
+        }
+        pre {
+            background-color: #f4f4f4;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            border-left: 3px solid #1772d0;
+        }
+        code {
+            background-color: #f4f4f4;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        .back-link {
+            margin-bottom: 20px;
+        }
+        .back-link a {
+            color: #1772d0;
+            text-decoration: none;
+        }
+        .back-link a:hover {
+            color: #f09228;
+        }
+        ul, ol {
+            margin: 15px 0;
+            padding-left: 30px;
+        }
+        li {
+            margin: 8px 0;
+        }
+        .highlight {
+            background-color: #ffffd0;
+            padding: 2px 5px;
+        }
+        .note {
+            background-color: #e8f4f8;
+            border-left: 4px solid #1772d0;
+            padding: 15px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="back-link">
+        <a href="../index.html">← Back to Homepage</a>
+    </div>
+
+    <h1>Python Version Management on macOS</h1>
+    <p><em>Everything about PATH variable, PYTHONPATH, symlinks, python installation and version management on macOS</em></p>
+
+    <h2>Understanding Python on macOS</h2>
+
+    <h3>System Python</h3>
+    <p>macOS comes with Python pre-installed, but it's typically an older version (often 3.8 or 3.9) located at <code>/usr/bin/python3</code>. You should generally avoid modifying this system Python as it's used by macOS itself.</p>
+
+    <h3>User-installed Python</h3>
+    <p>You'll want to install and manage your own Python versions for development work. There are several ways to do this on macOS.</p>
+
+    <h2>Python Installation Methods on macOS</h2>
+
+    <h3>1. Homebrew (Recommended for simplicity)</h3>
+    <pre><code># Install latest Python 3
+brew install python
+
+# Install specific version
+brew install python@3.11
+brew install python@3.12
+
+# List available versions
+brew search python</code></pre>
+
+    <div class="note">
+        <strong>Details:</strong>
+        <ul>
+            <li><strong>Location:</strong> <code>/opt/homebrew/opt/python@3.x/</code> (Apple Silicon) or <code>/usr/local/opt/python@3.x/</code> (Intel)</li>
+            <li><strong>Symlinks:</strong> <code>/opt/homebrew/bin/python3.x</code></li>
+            <li><strong>PATH:</strong> <code>/opt/homebrew/bin</code> added to PATH</li>
+        </ul>
+    </div>
+
+    <h3>2. Official Python.org Installer</h3>
+    <p>Download from <a href="https://www.python.org/downloads/" target="_blank">https://www.python.org/downloads/</a> and run the .pkg installer.</p>
+
+    <div class="note">
+        <strong>Details:</strong>
+        <ul>
+            <li><strong>Location:</strong> <code>/usr/local/bin/python3.x</code> and <code>/Applications/Python 3.x/</code></li>
+            <li><strong>PATH:</strong> Usually adds itself to PATH</li>
+            <li><strong>Versions:</strong> Latest stable releases</li>
+        </ul>
+    </div>
+
+    <h3>3. pyenv (Recommended for version management)</h3>
+    <pre><code># Install pyenv
+brew install pyenv
+
+# Add to your shell profile (.zshrc or .bash_profile)
+echo 'export PATH="$HOME/.pyenv/bin:$PATH"' >> ~/.zshrc
+echo 'eval "$(pyenv init --path)"' >> ~/.zshrc
+echo 'eval "$(pyenv init -)"' >> ~/.zshrc
+
+# Install Python versions
+pyenv install 3.11.8
+pyenv install 3.12.2
+pyenv install 3.13.0
+
+# List available versions to install
+pyenv install --list</code></pre>
+
+    <div class="note">
+        <strong>Details:</strong>
+        <ul>
+            <li><strong>Location:</strong> <code>~/.pyenv/versions/</code></li>
+            <li><strong>Shims:</strong> Uses <code>~/.pyenv/shims</code> in PATH</li>
+            <li><strong>Version switching:</strong> Global, local, or shell-specific</li>
+        </ul>
+    </div>
+
+    <h2>Understanding python -m pip</h2>
+    <p>The <code>-m</code> flag tells Python to run a module as a script. <code>python -m pip</code> means:</p>
+    <ul>
+        <li>Run pip as a module using the specific Python interpreter</li>
+        <li>Ensures pip installs packages for that exact Python version</li>
+        <li>More reliable than calling pip directly</li>
+    </ul>
+
+    <pre><code># These can be different!
+pip install package                      # Might use different Python version
+python3 -m pip install package           # Uses the specific python3 version
+
+# Even more specific
+python3.11 -m pip install package
+/opt/homebrew/bin/python3.12 -m pip install package</code></pre>
+
+    <h2>Best Practices</h2>
+
+    <h3>1. Virtual Environments</h3>
+    <p>Always use virtual environments for projects:</p>
+    <pre><code># Create virtual environment with specific Python
+python3.11 -m venv myproject_env
+source myproject_env/bin/activate</code></pre>
+
+    <h3>2. Check your environment</h3>
+    <pre><code># Verify your setup
+which python3
+python3 --version
+which pip3
+pip3 --version
+python3 -m pip --version</code></pre>
+
+    <h3>3. Upgrade pip safely</h3>
+    <pre><code># Upgrade pip for specific Python version
+python3.11 -m pip install --upgrade pip
+python3.12 -m pip install --upgrade pip</code></pre>
+
+    <h2>What is the PATH Variable?</h2>
+    <p>The PATH variable is one of the most important environment variables in Unix-like systems (macOS, Linux). It tells your shell where to look for executable programs when you type a command.</p>
+
+    <h3>What PATH Does</h3>
+    <p>When you type a command like <code>python3</code>, your shell doesn't magically know where to find it. Instead, it:</p>
+    <ol>
+        <li>Splits PATH into individual directories</li>
+        <li>Searches each directory in order from left to right</li>
+        <li>Runs the first match it finds</li>
+        <li>Stops searching once it finds a match</li>
+    </ol>
+
+    <pre><code># See your current PATH
+echo $PATH
+
+# Make it more readable (one directory per line)
+echo $PATH | tr ':' '\n'</code></pre>
+
+    <h3>How PATH Works</h3>
+    <p><strong>Example: What happens when you type python3</strong></p>
+
+    <p>If your PATH is this:</p>
+    <pre><code># /Users/machbluex/opt/anaconda3/bin
+# /opt/homebrew/bin
+# /opt/homebrew/sbin
+# /usr/local/bin
+# /usr/bin
+# /bin
+# /usr/sbin
+# /sbin</code></pre>
+
+    <p>Shell searches in this order:</p>
+    <pre><code># 1. /Users/machbluex/opt/anaconda3/bin/python3 ← Found! Uses this one
+# 2. /opt/homebrew/bin/python3 ← Skipped
+# 3. /usr/local/bin/python3 ← Skipped
+# 4. /usr/bin/python3 ← Skipped
+# etc.</code></pre>
+
+    <h3>Finding which executable is used</h3>
+    <pre><code># See which python3 will be executed
+which python3
+# /Users/machbluex/opt/anaconda3/bin/python3
+
+# See all python3 executables in PATH
+which -a python3
+# Shows all matches in PATH order
+# /Users/machbluex/opt/anaconda3/bin/python3
+# /opt/homebrew/bin/python3
+# /Library/Frameworks/Python.framework/Versions/3.10/bin/python3
+# /usr/local/bin/python3
+# /usr/bin/python3</code></pre>
+
+    <h3>Why PATH Order Matters</h3>
+    <p><strong>First match wins!</strong> This is why you might get unexpected behavior:</p>
+    <pre><code># Your PATH might look like:
+# /Users/machbluex/opt/anaconda3/bin:/opt/homebrew/bin:/usr/bin
+
+# So typing python3 uses Anaconda's version
+python3 --version
+# Python 3.11.5 (from Anaconda)
+
+# Even though you have Homebrew's python3 installed too
+/opt/homebrew/bin/python3 --version
+# Python 3.13.0 (from Homebrew)
+
+# If Anaconda comes first:
+# /Users/machbluex/opt/anaconda3/bin ← python3 from here
+# /opt/homebrew/bin ← python3 ignored
+
+# To temporarily use Homebrew's python: /opt/homebrew/bin/python3
+# To permanently change priority, modify ~/.zshrc</code></pre>
+
+    <h3>Modifying PATH</h3>
+
+    <h4>Temporary changes (current session only):</h4>
+    <pre><code># Add to beginning (highest priority)
+export PATH="/new/directory:$PATH"
+
+# Add to end (lowest priority)
+export PATH="$PATH:/new/directory"
+
+# Remove a directory
+export PATH=$(echo $PATH | tr ':' '\n' | grep -v '/unwanted/path' | tr '\n' ':')</code></pre>
+
+    <h4>Permanent changes:</h4>
+    <p>Add to your shell configuration file (<code>~/.zshrc</code> for zsh, <code>~/.bash_profile</code> for bash):</p>
+    <pre><code># Edit your shell config
+nano ~/.zshrc
+
+# Add lines like:
+export PATH="/opt/homebrew/bin:$PATH"
+export PATH="/Users/machbluex/.local/bin:$PATH"
+
+# Reload your config
+source ~/.zshrc</code></pre>
+
+    <h2>Symlinks</h2>
+
+    <h3>What is a symlink?</h3>
+    <p>A symlink (symbolic link) is essentially a shortcut or pointer to another file or directory. It's like an alias that redirects to the actual location of a file.</p>
+
+    <p><strong>Think of it like this:</strong></p>
+    <ul>
+        <li>Regular file: Contains actual data</li>
+        <li>Symlink: Contains a path that points to another file</li>
+        <li>When you access the symlink, the system automatically follows the pointer to the real file</li>
+    </ul>
+
+    <pre><code>Real file:  /opt/homebrew/opt/python@3.11/bin/python3.11 [actual binary data]
+               ↑
+Symlink:    /opt/homebrew/bin/python3.11 ---------------→ points here</code></pre>
+
+    <h3>How to Identify Symlinks?</h3>
+    <p>Using <code>ls -la</code>:</p>
+    <pre><code>ls -la /opt/homebrew/bin/python3.11
+# Output shows:
+# lrwxr-xr-x ... python3.11 -> ../opt/python@3.11/bin/python3.11
+# ↑                            ↑
+# l = symlink                  arrow shows target</code></pre>
+
+    <h3>Homebrew's Organization Structure</h3>
+    <pre><code>/opt/homebrew/
+├── bin/                  # Symlinks to executables (what's in your PATH)
+│   ├── python3.11 -> ../opt/python@3.11/bin/python3.11
+│   ├── python3.12 -> ../opt/python@3.12/bin/python3.12
+│   └── python3.13 -> ../opt/python@3.13/bin/python3.13
+│
+└── opt/                  # Actual installations
+    ├── python@3.11/
+    │   └── bin/python3.11    # Real binary here
+    ├── python@3.12/
+    │   └── bin/python3.12    # Real binary here
+    └── python@3.13/
+        └── bin/python3.13    # Real binary here</code></pre>
+
+    <h3>What is the difference between the two locations?</h3>
+    <pre><code>file /opt/homebrew/bin/python3.11
+# python3.11: Mach-O 64-bit executable arm64
+
+file /opt/homebrew/opt/python@3.11/bin/python3.11
+# Similar output</code></pre>
+
+    <p><strong>/opt/homebrew/bin/python3.11</strong> - This is a symlink - a shortcut that points to the actual installation</p>
+    <p><strong>/opt/homebrew/opt/python@3.11/bin/python3.11</strong> - This is the actual installation - where the real Python binary lives</p>
+
+    <h2>What is the PYTHONPATH Variable?</h2>
+    <p>PYTHONPATH is an environment variable that tells Python where to look for modules and packages when you import them. It extends Python's default module search path.</p>
+
+    <h3>What PYTHONPATH Does</h3>
+    <p>When you do <code>import something</code> in Python, Python searches for modules in this order:</p>
+    <ol>
+        <li>Current directory (where your script is)</li>
+        <li>PYTHONPATH directories (if set)</li>
+        <li>Standard library (built-in Python modules)</li>
+        <li>Site-packages (installed packages via pip)</li>
+    </ol>
+
+    <pre><code># See Python's complete search path
+python3 -c "import sys; print('\n'.join(sys.path))"
+
+# Example output:
+# /Users/username/current/directory
+# /opt/homebrew/lib/python3.13/site-packages
+# /opt/homebrew/lib/python3.13
+# /opt/homebrew/lib/python3.13/lib-dynload
+# ...</code></pre>
+
+    <h2>How Does a Virtual Environment Work?</h2>
+    <p>A virtual environment is essentially an isolated copy of Python with its own set of packages. Here's how it works under the hood:</p>
+
+    <p>A virtual environment creates a separate directory structure that contains:</p>
+    <ul>
+        <li>A Python interpreter (or link to one)</li>
+        <li>Its own <code>site-packages</code> directory for installed packages</li>
+        <li>Scripts to modify your environment when activated</li>
+    </ul>
+
+    <pre><code># Create a virtual environment
+python3 -m venv myenv
+
+# Let's see what was created
+ls -la myenv/</code></pre>
+
+    <h3>Directory Structure Created:</h3>
+    <pre><code>myenv/
+├── bin/                  # Executables (scripts, python, pip)
+│   ├── activate          # Activation script
+│   ├── activate.fish     # Fish shell activation
+│   ├── pip               # Virtual env's pip
+│   ├── pip3              # Symlink to pip
+│   ├── python            # Symlink to python3
+│   └── python3           # Symlink to system python3
+├── include/              # C headers for compiling extensions
+├── lib/
+│   └── python3.13/
+│       └── site-packages/    # Where packages get installed
+├── pyvenv.cfg            # Configuration file
+└── share/                # Shared data</code></pre>
+
+    <pre><code># Check what python3 executable the venv uses
+ls -la myenv/bin/python3
+# It's usually a symlink to your system Python
+# myenv/bin/python3 -> /opt/homebrew/bin/python3.13
+
+# Virtual env has its own package directory
+ls myenv/lib/python3.13/site-packages/
+# Initially almost empty (just pip and setuptools)
+# pip                  # Package installer
+# setuptools           # Package building tools
+# _distutils_hack      # Internal tools</code></pre>
+
+    <div class="note">
+        <strong>Key Takeaway:</strong> Virtual environments isolate your project dependencies, ensuring that different projects don't interfere with each other. Each project can have its own set of packages without affecting the system-wide Python installation or other projects.
+    </div>
+
+    <h2>Key Takeaways</h2>
+    <ul>
+        <li><strong>System Python</strong> should not be modified - use user-installed versions for development</li>
+        <li><strong>Homebrew</strong> is great for simplicity, <strong>pyenv</strong> is best for managing multiple versions</li>
+        <li><strong>PATH order matters</strong> - the first match is what gets executed</li>
+        <li><strong>python -m pip</strong> ensures you're installing packages for the correct Python version</li>
+        <li><strong>Symlinks</strong> are shortcuts that Homebrew uses to organize Python installations</li>
+        <li><strong>Virtual environments</strong> isolate project dependencies and should always be used</li>
+        <li><strong>PYTHONPATH</strong> extends Python's module search path when importing packages</li>
+    </ul>
+
+    <div class="back-link" style="margin-top: 40px;">
+        <a href="../index.html">← Back to Homepage</a>
+    </div>
+</body>
+</html>
