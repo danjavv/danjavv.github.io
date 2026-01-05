@@ -44,7 +44,7 @@ function updateProfilePicture() {
   const profileLink = document.getElementById('profile-link');
   if (profilePic && profileLink) {
     const isDarkMode = document.documentElement.classList.contains('dark-mode');
-    const imagePath = isDarkMode ? 'images/profilepic2.png' : 'images/profilepic.jpg';
+    const imagePath = isDarkMode ? 'images/profilepic2.png' : 'images/popartprofilepic.png';
 
     // Only animate if the image source is different
     if (profilePic.src !== new URL(imagePath, window.location.href).href) {
