@@ -141,3 +141,9 @@ span.highlight {
     display: inline-block;
     border-radius: 10px;
 }
+
+#profile-pic {
+  transition: opacity 0.2s ease-in-out;
+  -moz-transition: opacity 0.2s ease-in-out;
+  -webkit-transition: opacity 0.2s ease-in-out;
+}
