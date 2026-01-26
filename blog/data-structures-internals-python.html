@@ -1,0 +1,1516 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>Data Structures Internals in Python - Danish Javed</title>
+    <meta name="author" content="Danish Javed">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="../stylesheet.css">
+    <style>
+        body {
+            font-family: 'Lato', Verdana, Helvetica, sans-serif;
+            line-height: 1.6;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #1772d0;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #1772d0;
+            margin-top: 30px;
+        }
+        h3 {
+            color: #444;
+            margin-top: 20px;
+        }
+        pre {
+            background-color: #f4f4f4;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        code {
+            background-color: #f4f4f4;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        .back-link {
+            margin-bottom: 20px;
+        }
+        .back-link a {
+            color: #1772d0;
+            text-decoration: none;
+        }
+        .back-link a:hover {
+            color: #f09228;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+        .highlight {
+            background-color: #fffacd;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="back-link">
+        <a href="../index.html">← Back to Homepage</a>
+    </div>
+
+    <h1>Data Structures Internals in Python</h1>
+    <p><em>Deep dive into how Set, Dict, OrderedDict, HeapQ, List, and Deque are implemented internally in CPython</em></p>
+
+    <h2>Table of Contents</h2>
+    <ol>
+        <li><a href="#ordereddict">OrderedDict</a></li>
+        <li><a href="#heapq">HeapQ</a></li>
+        <li><a href="#set">Set</a></li>
+        <li><a href="#dict">Dict & DefaultDict</a></li>
+        <li><a href="#list">List</a></li>
+        <li><a href="#deque">Deque</a></li>
+        <li><a href="#hashtables">Hash Tables - Deep Dive</a></li>
+        <li><a href="#bst">Self-Balancing Binary Search Trees</a></li>
+    </ol>
+
+    <h2 id="ordereddict">1. OrderedDict</h2>
+
+    <h3>Overview</h3>
+    <p><code>OrderedDict</code> is a dict subclass that has methods specialized for rearranging dictionary order. It maintains insertion order while providing O(1) operations.</p>
+
+    <h4>Key Methods</h4>
+    <p><strong>popitem(last=True)</strong> - Returns and removes a (key, value) pair in LIFO order if last is true or FIFO order if false.</p>
+
+    <p><strong>move_to_end(key, last=True)</strong> - Moves an existing key to either end of an ordered dictionary. Useful in LRU Cache implementations.</p>
+
+    <pre><code>d = OrderedDict.fromkeys('abcde')
+d.move_to_end('b')
+''.join(d)  # 'acdeb'
+
+d.move_to_end('b', last=False)
+''.join(d)  # 'bacde'</code></pre>
+
+    <h3>Internal Implementation (CPython)</h3>
+    <p class="highlight">A hash table (normal dict) + a doubly linked list</p>
+
+    <p>This design gives:</p>
+    <ul>
+        <li>O(1) lookup (via hash table)</li>
+        <li>O(1) insertion order maintenance (via linked list)</li>
+        <li>O(1) deletion while preserving order</li>
+    </ul>
+
+    <h4>The OrderedDict Object</h4>
+    <pre><code>typedef struct {
+    PyDictObject dict;        // underlying dict
+    _ODictNode *od_first;     // head of linked list
+    _ODictNode *od_last;      // tail of linked list
+    Py_ssize_t od_state;      // mutation counter
+} PyODictObject;</code></pre>
+
+    <p>It literally embeds a <code>PyDictObject</code>, and order is maintained outside the hash table.</p>
+
+    <h4>The Linked List Node</h4>
+    <pre><code>typedef struct _odictnode {
+    PyObject *key;
+    Py_hash_t hash;
+    struct _odictnode *next;
+    struct _odictnode *prev;
+} _ODictNode;</code></pre>
+
+    <p><strong>Critical Detail:</strong> Each key in the dict has exactly one node in this doubly linked list.</p>
+
+    <h3>How Lookup Works (Critical Detail)</h3>
+    <p>Unlike a naive design, OrderedDict <strong>does not store nodes inside dict values</strong>.</p>
+
+    <p>Instead:</p>
+    <ul>
+        <li>The <strong>dict maps key → node</strong></li>
+        <li>The node contains the key + hash + pointers</li>
+    </ul>
+
+    <p>So conceptually:</p>
+    <pre><code>dict[key] → _ODictNode*</code></pre>
+
+    <p>This avoids extra hash lookups.</p>
+
+    <h3>Insertion Flow</h3>
+    <p><strong>od[key] = value</strong></p>
+
+    <ol>
+        <li>Compute <code>hash(key)</code></li>
+        <li>Check if key already exists in dict</li>
+        <li>If new key:
+            <ul>
+                <li>Allocate <code>_ODictNode</code></li>
+                <li>Append node to tail of linked list</li>
+                <li>Insert <code>key → node</code> into dict</li>
+            </ul>
+        </li>
+        <li>Store the actual value in a parallel structure managed by dict</li>
+    </ol>
+
+    <p><strong>Important:</strong> Order is updated <strong>only on first insertion</strong>, not on overwrite.</p>
+
+    <h3>Deletion Flow</h3>
+    <p><strong>del od[key]</strong></p>
+
+    <ol>
+        <li>Lookup node via dict</li>
+        <li>Unlink node from doubly linked list</li>
+        <li>Remove entry from dict</li>
+        <li>Free node</li>
+    </ol>
+
+    <p><strong>All steps are O(1).</strong></p>
+
+    <h3>Iteration (Why It's Fast)</h3>
+    <p>Iteration does not touch the hash table order at all.</p>
+
+    <pre><code>od_first → node → node → node → od_last</code></pre>
+
+    <p>This is why:</p>
+    <ul>
+        <li>Iteration is stable</li>
+        <li>Reverse iteration is trivial</li>
+        <li><code>popitem(last=True)</code> is O(1)</li>
+    </ul>
+
+    <h3>Move-to-End Operation</h3>
+    <p>This is the <strong>secret sauce behind LRU caches</strong>.</p>
+
+    <pre><code>od.move_to_end(key, last=True)</code></pre>
+
+    <p>Internally:</p>
+    <ol>
+        <li>Find node in dict</li>
+        <li>Unlink it</li>
+        <li>Reinsert at head or tail</li>
+    </ol>
+
+    <p><strong>No rehashing. No copying.</strong></p>
+
+    <h3>Operation Complexities</h3>
+    <table>
+        <tr>
+            <th>Operation</th>
+            <th>Complexity</th>
+            <th>Explanation</th>
+        </tr>
+        <tr>
+            <td><code>popitem(last=True)</code></td>
+            <td>O(1)</td>
+            <td>Head/tail removal</td>
+        </tr>
+        <tr>
+            <td><code>move_to_end(key, last=True)</code></td>
+            <td>O(1)</td>
+            <td>Unlink + relink node</td>
+        </tr>
+        <tr>
+            <td><code>od[key] = value</code></td>
+            <td>O(1) avg amortized</td>
+            <td>Hash lookup + append node if new</td>
+        </tr>
+        <tr>
+            <td><code>od[key]</code></td>
+            <td>O(1) avg amortized</td>
+            <td>Dict lookup</td>
+        </tr>
+        <tr>
+            <td><code>del od[key]</code></td>
+            <td>O(1) avg amortized</td>
+            <td>Dict delete + unlink node</td>
+        </tr>
+    </table>
+
+    <h2 id="heapq">2. HeapQ</h2>
+
+    <h3>Overview</h3>
+    <p>The <code>heapq</code> module provides an implementation of the heap queue algorithm, also known as the priority queue algorithm. Min-heaps are binary trees for which every parent node has a value less than or equal to any of its children (heap invariant).</p>
+
+    <h3>Why Use HeapQ?</h3>
+    <ul>
+        <li>Provides an efficient way to implement priority queues using heaps</li>
+        <li>Helps maintain a list in heap order with minimal code and high performance</li>
+        <li>Useful in algorithms like Dijkstra's, Huffman encoding, or any task requiring quick access to smallest element</li>
+        <li>Offers functions like <code>heapify()</code>, <code>heappush()</code>, and <code>heappop()</code> for efficient insertion and removal</li>
+    </ul>
+
+    <h3>Function Complexities</h3>
+    <table>
+        <tr>
+            <th>Function</th>
+            <th>Complexity</th>
+            <th>Why</th>
+        </tr>
+        <tr>
+            <td><code>heappush(heap, x)</code></td>
+            <td>O(log n)</td>
+            <td>Sift-up</td>
+        </tr>
+        <tr>
+            <td><code>heappop(heap)</code></td>
+            <td>O(log n)</td>
+            <td>Sift-down</td>
+        </tr>
+        <tr>
+            <td><code>heapreplace(heap, x)</code></td>
+            <td>O(log n)</td>
+            <td>Pop + push combined</td>
+        </tr>
+        <tr>
+            <td><code>heappushpop(heap, x)</code></td>
+            <td>O(log n) (best-case O(1))</td>
+            <td>Conditional sift</td>
+        </tr>
+        <tr>
+            <td><code>heapify(x)</code></td>
+            <td>O(n)</td>
+            <td>Floyd's algorithm</td>
+        </tr>
+    </table>
+
+    <h3>Internal Implementation</h3>
+    <p class="highlight">Core design choice: A heap is just a Python list.</p>
+
+    <p>There is:</p>
+    <ul>
+        <li>No Heap class, no node objects, no tree pointers</li>
+        <li>Just <code>heap = []</code></li>
+    </ul>
+
+    <p>The heap invariant (min-heap):</p>
+    <pre><code>heap[i] <= heap[2*i + 1]
+heap[i] <= heap[2*i + 2]</code></pre>
+
+    <h4>Why an Array-Based Heap?</h4>
+    <p>Python design constraints:</p>
+    <ul>
+        <li>Object allocation is expensive</li>
+        <li>Pointer chasing is cache-unfriendly</li>
+        <li>Python comparisons are slow</li>
+    </ul>
+
+    <p>So heapq is optimized to:</p>
+    <ul>
+        <li>Minimize comparisons</li>
+        <li>Minimize assignments</li>
+        <li>Allocate nothing</li>
+    </ul>
+
+    <h3>Example Code</h3>
+    <pre><code>import heapq
+
+li = [25, 20, 15, 30, 40]
+
+# Convert the list into a heap
+heapq.heapify(li)
+
+print("Heap queue:", li)</code></pre>
+
+    <h3>The Only Two Real Operations</h3>
+    <p>Everything in heapq reduces to two internal helpers:</p>
+
+    <p><strong>_siftdown → used when inserting</strong></p>
+    <p>Moves an element <strong>up</strong> the tree.</p>
+
+    <p><strong>_siftup → used when removing</strong></p>
+    <p>Moves an element <strong>down</strong> the tree.</p>
+
+    <h4>_siftdown (Bubble Up)</h4>
+    <p>Called after inserting at the end.</p>
+
+    <p><strong>Simplified logic (from heapq.py):</strong></p>
+    <pre><code>def _siftdown(heap, startpos, pos):
+    newitem = heap[pos]
+    while pos > startpos:
+        parentpos = (pos - 1) >> 1
+        parent = heap[parentpos]
+        if newitem < parent:
+            heap[pos] = parent
+            pos = parentpos
+        else:
+            break
+    heap[pos] = newitem</code></pre>
+
+    <h4>Key Internal Optimizations</h4>
+    <ul>
+        <li>Uses <code>&gt;&gt; 1</code> instead of <code>/ 2</code></li>
+        <li>Moves parents down, inserts once</li>
+        <li>Avoids repeated swapping</li>
+    </ul>
+
+    <p>⏱ O(log n) comparisons, minimal writes.</p>
+
+    <h4>_siftup (Bubble Down)</h4>
+    <p>Used after popping the root.</p>
+
+    <pre><code>def _siftup(heap, pos):
+    endpos = len(heap)
+    startpos = pos
+    newitem = heap[pos]
+    childpos = 2*pos + 1
+
+    while childpos < endpos:
+        rightpos = childpos + 1
+        if rightpos < endpos and heap[rightpos] < heap[childpos]:
+            childpos = rightpos
+        heap[pos] = heap[childpos]
+        pos = childpos
+        childpos = 2*pos + 1
+
+    heap[pos] = newitem
+    _siftdown(heap, startpos, pos)</code></pre>
+
+    <h4>Why _siftdown Again at the End?</h4>
+    <p>This is a <strong>classic CPython micro-optimization:</strong></p>
+    <ul>
+        <li><code>_siftup</code> pushes the "hole" to a leaf</li>
+        <li><code>_siftdown</code> fixes ordering on the way up</li>
+        <li>Fewer comparisons than swapping at every level</li>
+    </ul>
+
+    <h3>heappush</h3>
+    <pre><code>def heappush(heap, item):
+    heap.append(item)
+    _siftdown(heap, 0, len(heap) - 1)</code></pre>
+
+    <p>That's literally it.</p>
+
+    <h3>heappop</h3>
+    <pre><code>def heappop(heap):
+    lastelt = heap.pop()
+    if heap:
+        returnitem = heap[0]
+        heap[0] = lastelt
+        _siftup(heap, 0)
+        return returnitem
+    return lastelt</code></pre>
+
+    <p><strong>Important detail:</strong></p>
+    <ul>
+        <li>Last element is popped first → avoids shifting the list</li>
+        <li>Root is replaced, then fixed</li>
+    </ul>
+
+    <h3>Why heapify is O(n)</h3>
+    <pre><code>def heapify(x):
+    for i in reversed(range(len(x)//2)):
+        _siftup(x, i)</code></pre>
+
+    <p><strong>Explanation:</strong></p>
+    <ul>
+        <li>Leaves are already heaps</li>
+        <li>Internal nodes are fixed bottom-up</li>
+        <li>Total work sums to O(n) (Floyd's algorithm)</li>
+    </ul>
+
+    <h3>How to Implement Max Heap?</h3>
+    <p>Use:</p>
+    <pre><code>heapq.heappush(heap, -x)</code></pre>
+    <p>That is, store and pop elements by their negative values.</p>
+
+    <h2 id="set">3. Set</h2>
+
+    <h3>Overview</h3>
+    <p>A Set in Python is used to store a collection of items with the following properties:</p>
+    <ul>
+        <li>No duplicate elements</li>
+        <li>An unordered collection</li>
+        <li>Internally uses hashing for efficient search, insert, and delete operations</li>
+        <li>Mutable (we can add or remove elements after creation)</li>
+    </ul>
+
+    <h3>Operation Complexities</h3>
+    <table>
+        <tr>
+            <th>Operation</th>
+            <th>Complexity (avg)</th>
+            <th>Worst</th>
+            <th>Notes</th>
+        </tr>
+        <tr>
+            <td><code>x in s</code></td>
+            <td>O(1)</td>
+            <td>O(n)</td>
+            <td>Hash lookup</td>
+        </tr>
+        <tr>
+            <td><code>s.add(x)</code></td>
+            <td>O(1)</td>
+            <td>O(n)</td>
+            <td>May resize</td>
+        </tr>
+        <tr>
+            <td><code>s.remove(x)</code></td>
+            <td>O(1)</td>
+            <td>O(n)</td>
+            <td>Raises KeyError</td>
+        </tr>
+        <tr>
+            <td><code>s.discard(x)</code></td>
+            <td>O(1)</td>
+            <td>O(n)</td>
+            <td>No error</td>
+        </tr>
+        <tr>
+            <td><code>len(s)</code></td>
+            <td>O(1)</td>
+            <td>—</td>
+            <td>Stored count</td>
+        </tr>
+        <tr>
+            <td><code>s.clear()</code></td>
+            <td>O(n)</td>
+            <td>—</td>
+            <td>Frees table</td>
+        </tr>
+        <tr>
+            <td><code>x not in s</code></td>
+            <td>O(1)</td>
+            <td>O(n)</td>
+            <td>Negated lookup</td>
+        </tr>
+    </table>
+
+    <h3>Operations NOT Supported</h3>
+    <table>
+        <tr>
+            <th>Operation</th>
+            <th>Reason</th>
+        </tr>
+        <tr>
+            <td>Indexing (<code>s[0]</code>)</td>
+            <td>No order</td>
+        </tr>
+        <tr>
+            <td>Slicing</td>
+            <td>No order</td>
+        </tr>
+        <tr>
+            <td>Stable iteration</td>
+            <td>Hash-table scan</td>
+        </tr>
+        <tr>
+            <td>Sorting in-place</td>
+            <td>Not meaningful</td>
+        </tr>
+    </table>
+
+    <h3>Internal Implementation</h3>
+    <p class="highlight">A Python set is a hash table, not a tree, not a bitset.</p>
+
+    <p>It is very similar to dict, but:</p>
+    <ul>
+        <li>Stores only keys (no values)</li>
+        <li>Uses a slightly simpler entry structure</li>
+        <li>Is optimized for membership testing</li>
+    </ul>
+
+    <h4>High-Level Structure</h4>
+    <pre><code>typedef struct {
+    PyObject_HEAD
+    Py_ssize_t fill;        // active + dummy entries
+    Py_ssize_t used;        // active entries only
+    Py_ssize_t mask;        // table size - 1
+    setentry *table;        // hash table
+    Py_hash_t hash;         // for frozenset only
+    Py_ssize_t finger;      // iteration state
+} PySetObject;</code></pre>
+
+    <h4>What These Mean</h4>
+    <table>
+        <tr>
+            <th>Field</th>
+            <th>Meaning</th>
+        </tr>
+        <tr>
+            <td><code>used</code></td>
+            <td>Number of live elements</td>
+        </tr>
+        <tr>
+            <td><code>fill</code></td>
+            <td>Live + deleted ("dummy")</td>
+        </tr>
+        <tr>
+            <td><code>mask</code></td>
+            <td>table_size - 1 (power of two)</td>
+        </tr>
+        <tr>
+            <td><code>table</code></td>
+            <td>Pointer to entry array</td>
+        </tr>
+        <tr>
+            <td><code>finger</code></td>
+            <td>Iterator progress</td>
+        </tr>
+        <tr>
+            <td><code>hash</code></td>
+            <td>Cached hash (frozenset only)</td>
+        </tr>
+    </table>
+
+    <h4>Entry Structure</h4>
+    <pre><code>typedef struct {
+    PyObject *key;
+    Py_hash_t hash;
+} setentry;</code></pre>
+
+    <p><strong>Special values:</strong></p>
+    <ul>
+        <li><code>key == NULL</code> → <strong>empty slot</strong></li>
+        <li><code>key == dummy</code> → <strong>deleted slot</strong> (dummy is a global singleton marker)</li>
+    </ul>
+
+    <h3>Hashing & Indexing</h3>
+    <p>Index calculation:</p>
+    <pre><code>i = hash & mask;</code></pre>
+
+    <p>Table size is always a <strong>power of two</strong>, so modulo is a cheap bitmask.</p>
+
+    <h3>Collision Resolution (THIS IS KEY)</h3>
+    <p>Python sets use <strong>open addressing with perturbation probing</strong> (not chaining, not linear probing).</p>
+
+    <p><strong>Probe sequence:</strong></p>
+    <pre><code>i = (i * 5 + 1 + perturb) & mask;
+perturb >>= 5;</code></pre>
+
+    <p><strong>Why this design?</strong></p>
+    <ul>
+        <li>Starts with hash bits</li>
+        <li>Gradually mixes in higher bits</li>
+        <li>Avoids clustering</li>
+        <li>Extremely cache-friendly</li>
+    </ul>
+
+    <p>This same scheme is used by <code>dict</code>.</p>
+
+    <h3>Lookup Operation (x in set)</h3>
+    <h4>Steps</h4>
+    <ol>
+        <li>Compute <code>hash(x)</code></li>
+        <li>Compute initial index: <code>hash & mask</code></li>
+        <li>Probe until:
+            <ul>
+                <li>matching hash + equality → <strong>found</strong></li>
+                <li>empty slot → <strong>not found</strong></li>
+            </ul>
+        </li>
+    </ol>
+
+    <h4>Complexity</h4>
+    <table>
+        <tr>
+            <th>Case</th>
+            <th>Cost</th>
+        </tr>
+        <tr>
+            <td>Average</td>
+            <td>O(1)</td>
+        </tr>
+        <tr>
+            <td>Worst (pathological hashes)</td>
+            <td>O(n)</td>
+        </tr>
+    </table>
+
+    <p>Python randomizes hashes to prevent DOS attacks.</p>
+
+    <h3>Insertion (set.add(x))</h3>
+    <ol>
+        <li>Lookup slot using probing</li>
+        <li>If key already exists → do nothing</li>
+        <li>Else:
+            <ul>
+                <li>Insert <code>(key, hash)</code></li>
+                <li>Increment <code>used</code> and <code>fill</code></li>
+            </ul>
+        </li>
+        <li>Check load factor → resize if needed</li>
+    </ol>
+
+    <h4>Load Factor Rules</h4>
+    <p>Resize when:</p>
+    <pre><code>fill * 3 >= mask * 2  (~66%)</code></pre>
+
+    <p>This keeps probe lengths short.</p>
+
+    <h3>Deletion (set.remove, discard)</h3>
+    <p>Deletion does <strong>not</strong> clear the slot.</p>
+
+    <p>Instead:</p>
+    <pre><code>entry->key = dummy;</code></pre>
+
+    <p><strong>Why?</strong></p>
+    <ul>
+        <li>Clearing breaks probe chains</li>
+        <li>Dummy preserves search correctness</li>
+    </ul>
+
+    <p>Too many dummies → triggers resize.</p>
+
+    <h3>Resizing (Rehashing)</h3>
+    <p>When resizing:</p>
+    <ul>
+        <li>Allocate new table (2× or ½)</li>
+        <li>Reinsert only live keys</li>
+        <li>Drop dummy entries</li>
+    </ul>
+
+    <p>Cost: O(n), but amortized O(1) per operation.</p>
+
+    <h3>Iteration</h3>
+    <p>Iteration is a <strong>linear scan over the table</strong>:</p>
+    <pre><code>for i in range(table_size):
+    if entry[i].key is real:
+        yield entry[i].key</code></pre>
+
+    <h4>Important Consequences</h4>
+    <ul>
+        <li>Order is <strong>arbitrary</strong></li>
+        <li>Mutation during iteration raises <code>RuntimeError</code></li>
+        <li>Iteration cost is <strong>O(table_size)</strong>, not <code>O(len(set))</code></li>
+    </ul>
+
+    <h2 id="dict">4. Dict & DefaultDict</h2>
+
+    <h3>Overview</h3>
+    <p>Python's <code>dict</code> (dictionary) is one of the most fundamental and heavily optimized data structures in the language. It implements an associative array that maps hashable keys to arbitrary values.</p>
+
+    <h3>Dict vs Set</h3>
+    <p>A dict is essentially a set with values attached:</p>
+    <ul>
+        <li><strong>Set:</strong> Stores only keys</li>
+        <li><strong>Dict:</strong> Stores key-value pairs</li>
+    </ul>
+    <p>Both use the same underlying hash table implementation with perturbation probing.</p>
+
+    <h3>Internal Structure</h3>
+    <p>Modern Python dicts (3.6+) use a <strong>compact dict</strong> design:</p>
+    <pre><code>typedef struct {
+    PyObject_HEAD
+    Py_ssize_t ma_used;          // number of items
+    PyDictKeysObject *ma_keys;   // keys table
+    PyObject **ma_values;        // values array
+} PyDictObject;</code></pre>
+
+    <h4>The Compact Design</h4>
+    <p>Before Python 3.6, dicts stored entries in a sparse array. The new design uses two arrays:</p>
+    <ul>
+        <li><strong>Indices array:</strong> Sparse, stores indices into entries array</li>
+        <li><strong>Entries array:</strong> Dense, stores actual (key, value, hash) tuples</li>
+    </ul>
+
+    <p><strong>Benefits:</strong></p>
+    <ul>
+        <li>Preserves insertion order (as of Python 3.7, this is guaranteed)</li>
+        <li>Uses 20-25% less memory</li>
+        <li>Faster iteration (iterate over dense array, not sparse)</li>
+    </ul>
+
+    <h3>Operation Complexities</h3>
+    <table>
+        <tr>
+            <th>Operation</th>
+            <th>Average</th>
+            <th>Worst</th>
+            <th>Notes</th>
+        </tr>
+        <tr>
+            <td><code>d[key]</code></td>
+            <td>O(1)</td>
+            <td>O(n)</td>
+            <td>Hash lookup</td>
+        </tr>
+        <tr>
+            <td><code>d[key] = value</code></td>
+            <td>O(1)</td>
+            <td>O(n)</td>
+            <td>May resize</td>
+        </tr>
+        <tr>
+            <td><code>del d[key]</code></td>
+            <td>O(1)</td>
+            <td>O(n)</td>
+            <td>Marks entry as deleted</td>
+        </tr>
+        <tr>
+            <td><code>key in d</code></td>
+            <td>O(1)</td>
+            <td>O(n)</td>
+            <td>Hash lookup</td>
+        </tr>
+        <tr>
+            <td><code>d.get(key, default)</code></td>
+            <td>O(1)</td>
+            <td>O(n)</td>
+            <td>Safe lookup</td>
+        </tr>
+        <tr>
+            <td>Iteration</td>
+            <td>O(n)</td>
+            <td>O(n)</td>
+            <td>Linear scan of entries</td>
+        </tr>
+    </table>
+
+    <h3>DefaultDict</h3>
+    <p><code>collections.defaultdict</code> is a subclass of dict that provides a default value for missing keys:</p>
+
+    <pre><code>from collections import defaultdict
+
+# Instead of KeyError, returns default value
+d = defaultdict(int)
+d['missing']  # Returns 0
+
+# Common use case: grouping
+groups = defaultdict(list)
+for item in items:
+    groups[item.category].append(item)</code></pre>
+
+    <p><strong>Implementation:</strong> DefaultDict simply overrides <code>__missing__()</code> to call the default_factory function when a key is not found.</p>
+
+    <h3>Dict Views</h3>
+    <p>Python dicts provide dynamic views:</p>
+    <pre><code>d = {'a': 1, 'b': 2}
+keys = d.keys()      # dict_keys view
+values = d.values()  # dict_values view
+items = d.items()    # dict_items view</code></pre>
+
+    <p>These views are <strong>dynamic</strong> - they reflect changes to the dictionary in real-time and don't create a copy.</p>
+
+    <h2 id="list">5. List</h2>
+
+    <h3>Overview</h3>
+    <p>Python's <code>list</code> is a dynamic array that can grow or shrink as needed. It's one of the most commonly used data structures in Python.</p>
+
+    <h3>Internal Implementation</h3>
+    <p class="highlight">A list is a dynamic array with over-allocation for efficiency.</p>
+
+    <pre><code>typedef struct {
+    PyObject_VAR_HEAD
+    PyObject **ob_item;    // pointer to array of object pointers
+    Py_ssize_t allocated;  // how many slots allocated
+} PyListObject;</code></pre>
+
+    <p><strong>Key points:</strong></p>
+    <ul>
+        <li><code>ob_size</code>: Current number of elements (from PyObject_VAR_HEAD)</li>
+        <li><code>allocated</code>: Total capacity (always ≥ ob_size)</li>
+        <li><code>ob_item</code>: Array of pointers to Python objects</li>
+    </ul>
+
+    <h3>Growth Strategy</h3>
+    <p>When a list needs to grow, it doesn't just add one slot. Instead, it over-allocates:</p>
+
+    <p><strong>Growth pattern:</strong></p>
+    <pre><code>new_allocated = (size >> 3) + (size < 9 ? 3 : 6) + size</code></pre>
+
+    <p>This means:</p>
+    <ul>
+        <li>Small lists: Grow by 3-6 slots</li>
+        <li>Larger lists: Grow by ~12.5% (size/8 + size)</li>
+    </ul>
+
+    <p><strong>Why over-allocate?</strong> Makes append operations amortized O(1) instead of O(n).</p>
+
+    <h3>Operation Complexities</h3>
+    <table>
+        <tr>
+            <th>Operation</th>
+            <th>Complexity</th>
+            <th>Notes</th>
+        </tr>
+        <tr>
+            <td><code>list[i]</code></td>
+            <td>O(1)</td>
+            <td>Direct array access</td>
+        </tr>
+        <tr>
+            <td><code>list.append(x)</code></td>
+            <td>O(1) amortized</td>
+            <td>May trigger reallocation</td>
+        </tr>
+        <tr>
+            <td><code>list.insert(i, x)</code></td>
+            <td>O(n)</td>
+            <td>Shifts all elements after i</td>
+        </tr>
+        <tr>
+            <td><code>list.pop()</code></td>
+            <td>O(1)</td>
+            <td>Remove from end</td>
+        </tr>
+        <tr>
+            <td><code>list.pop(i)</code></td>
+            <td>O(n)</td>
+            <td>Shifts all elements after i</td>
+        </tr>
+        <tr>
+            <td><code>list.remove(x)</code></td>
+            <td>O(n)</td>
+            <td>Search + shift</td>
+        </tr>
+        <tr>
+            <td><code>x in list</code></td>
+            <td>O(n)</td>
+            <td>Linear search</td>
+        </tr>
+        <tr>
+            <td><code>list.sort()</code></td>
+            <td>O(n log n)</td>
+            <td>Timsort algorithm</td>
+        </tr>
+        <tr>
+            <td><code>list.reverse()</code></td>
+            <td>O(n)</td>
+            <td>In-place reversal</td>
+        </tr>
+        <tr>
+            <td>Slicing <code>list[a:b]</code></td>
+            <td>O(b-a)</td>
+            <td>Creates new list</td>
+        </tr>
+    </table>
+
+    <h3>Memory Considerations</h3>
+    <p><strong>Lists store pointers, not values directly:</strong></p>
+    <pre><code># Each list element is a pointer (8 bytes on 64-bit)
+lst = [1, 2, 3]  # Stores 3 pointers to int objects
+
+# The actual integers are separate Python objects
+# List overhead: ~56 bytes + 8 bytes per element</code></pre>
+
+    <h3>Why Append is Fast</h3>
+    <p>Example of list growth:</p>
+    <pre><code>lst = []
+for i in range(10):
+    lst.append(i)
+    print(f"size={len(lst)}, allocated={sys.getsizeof(lst)}")</code></pre>
+
+    <p>Output shows allocated space grows in jumps: 0, 4, 8, 16, 25, 35, 46, 58, 72, 88...</p>
+
+    <p>This means appending 10 items only triggers ~4 reallocations instead of 10.</p>
+
+    <h2 id="deque">6. Deque</h2>
+
+    <h3>Overview</h3>
+    <p><code>collections.deque</code> (double-ended queue) is optimized for fast appends and pops from both ends. Unlike lists, deques use a different internal structure.</p>
+
+    <h3>Internal Implementation</h3>
+    <p class="highlight">A deque is implemented as a doubly-linked list of blocks (arrays).</p>
+
+    <p><strong>Structure:</strong></p>
+    <pre><code>typedef struct {
+    PyObject_VAR_HEAD
+    block *leftblock;      // leftmost block
+    block *rightblock;     // rightmost block
+    Py_ssize_t leftindex;  // index in leftblock
+    Py_ssize_t rightindex; // index in rightblock
+    size_t state;          // modification counter
+    Py_ssize_t maxlen;     // max size (or -1)
+} dequeobject;</code></pre>
+
+    <p><strong>Each block:</strong></p>
+    <pre><code>#define BLOCKLEN 64  // elements per block
+
+typedef struct block {
+    struct block *leftlink;
+    struct block *rightlink;
+    PyObject *data[BLOCKLEN];
+} block;</code></pre>
+
+    <h4>Why This Design?</h4>
+    <p>Hybrid approach combining benefits of:</p>
+    <ul>
+        <li><strong>Linked list:</strong> O(1) insertion/deletion at ends</li>
+        <li><strong>Array:</strong> Good cache locality within blocks</li>
+    </ul>
+
+    <p>Instead of one node per element, deque uses blocks of 64 elements, reducing memory overhead and improving cache performance.</p>
+
+    <h3>Operation Complexities</h3>
+    <table>
+        <tr>
+            <th>Operation</th>
+            <th>Complexity</th>
+            <th>Notes</th>
+        </tr>
+        <tr>
+            <td><code>deque.append(x)</code></td>
+            <td>O(1)</td>
+            <td>Add to right end</td>
+        </tr>
+        <tr>
+            <td><code>deque.appendleft(x)</code></td>
+            <td>O(1)</td>
+            <td>Add to left end</td>
+        </tr>
+        <tr>
+            <td><code>deque.pop()</code></td>
+            <td>O(1)</td>
+            <td>Remove from right end</td>
+        </tr>
+        <tr>
+            <td><code>deque.popleft()</code></td>
+            <td>O(1)</td>
+            <td>Remove from left end</td>
+        </tr>
+        <tr>
+            <td><code>deque[i]</code></td>
+            <td>O(n)</td>
+            <td>Must traverse blocks</td>
+        </tr>
+        <tr>
+            <td><code>deque.rotate(k)</code></td>
+            <td>O(k)</td>
+            <td>Rotate elements</td>
+        </tr>
+        <tr>
+            <td><code>x in deque</code></td>
+            <td>O(n)</td>
+            <td>Linear search</td>
+        </tr>
+        <tr>
+            <td><code>len(deque)</code></td>
+            <td>O(1)</td>
+            <td>Stored count</td>
+        </tr>
+    </table>
+
+    <h3>Deque vs List</h3>
+    <table>
+        <tr>
+            <th>Operation</th>
+            <th>List</th>
+            <th>Deque</th>
+        </tr>
+        <tr>
+            <td>Append right</td>
+            <td>O(1) amortized</td>
+            <td>O(1)</td>
+        </tr>
+        <tr>
+            <td>Append left</td>
+            <td>O(n)</td>
+            <td>O(1)</td>
+        </tr>
+        <tr>
+            <td>Pop right</td>
+            <td>O(1)</td>
+            <td>O(1)</td>
+        </tr>
+        <tr>
+            <td>Pop left</td>
+            <td>O(n)</td>
+            <td>O(1)</td>
+        </tr>
+        <tr>
+            <td>Index access</td>
+            <td>O(1)</td>
+            <td>O(n)</td>
+        </tr>
+        <tr>
+            <td>Memory</td>
+            <td>Contiguous</td>
+            <td>Blocks</td>
+        </tr>
+    </table>
+
+    <p><strong>Use deque when:</strong></p>
+    <ul>
+        <li>You need fast operations at both ends</li>
+        <li>Implementing queues or stacks</li>
+        <li>You don't need random access</li>
+    </ul>
+
+    <p><strong>Use list when:</strong></p>
+    <ul>
+        <li>You need fast random access</li>
+        <li>You mostly append/pop from one end</li>
+        <li>You need contiguous memory</li>
+    </ul>
+
+    <h3>Bounded Deque</h3>
+    <p>Deques can have a maximum length:</p>
+    <pre><code>from collections import deque
+
+# Bounded deque - automatically drops from opposite end
+dq = deque(maxlen=3)
+dq.extend([1, 2, 3])  # deque([1, 2, 3])
+dq.append(4)          # deque([2, 3, 4]) - 1 was dropped</code></pre>
+
+    <p>This is perfect for implementing:</p>
+    <ul>
+        <li>Fixed-size buffers</li>
+        <li>Sliding windows</li>
+        <li>Recent history tracking</li>
+    </ul>
+
+    <h2 id="hashtables">7. Hash Tables - Deep Dive</h2>
+
+    <h3>What a Hash Table Fundamentally Is</h3>
+    <p>A hash table implements a mapping: <code>key → value</code></p>
+
+    <p>With the goal of:</p>
+    <ul>
+        <li>O(1) average lookup</li>
+        <li>O(1) average insert</li>
+        <li>O(1) average delete</li>
+    </ul>
+
+    <p>It achieves this by turning a key into an array index using a hash function.</p>
+
+    <h3>Hash Functions</h3>
+    <p>A hash function maps a key to an integer: <code>h = hash(key)</code></p>
+
+    <p><strong>Good hash functions aim for:</strong></p>
+    <ul>
+        <li>Determinism: same key → same hash</li>
+        <li>Uniformity: hashes spread evenly</li>
+        <li>Speed: called constantly</li>
+        <li>Avalanche effect: small key change → big hash change</li>
+    </ul>
+
+    <h3>From Hash to Table Index</h3>
+    <p>Hash tables store data in an array of size N. To map a hash to an index:</p>
+    <pre><code>index = hash % N</code></pre>
+
+    <p>In real implementations (including Python):</p>
+    <pre><code>index = hash & (N - 1)</code></pre>
+
+    <p>This only works when N is a power of two (8, 16, 32, 64, 128...). Bitwise AND is much faster than modulo.</p>
+
+    <h3>Collision Resolution Strategies</h3>
+
+    <h4>A) Separate Chaining</h4>
+    <p>Each bucket holds a linked list: <code>index 3 → (k1,v1) → (k2,v2) → (k3,v3)</code></p>
+    <p>Simple, but pointer-heavy and cache-unfriendly. Used in many textbooks, not used in Python.</p>
+
+    <h4>B) Open Addressing (Python uses this)</h4>
+    <p>All entries live inside the array itself. If a slot is taken, you probe for another slot.</p>
+
+    <p><strong>Perturbation Probing (Python's choice):</strong></p>
+    <pre><code>i = hash & mask
+perturb = hash
+
+while slot not usable:
+    i = (i * 5 + 1 + perturb) & mask
+    perturb >>= 5</code></pre>
+
+    <p><strong>Why this is brilliant:</strong></p>
+    <ul>
+        <li>Starts with low hash bits</li>
+        <li>Gradually mixes in high bits</li>
+        <li>Avoids clustering</li>
+        <li>Deterministic but well-distributed</li>
+        <li>Extremely cache-friendly</li>
+    </ul>
+
+    <h3>Deletion - The Tricky Part</h3>
+    <p>You cannot just clear a slot. Why?</p>
+    <pre><code>A collides → placed later
+B collides → placed even later
+
+If A is deleted and slot cleared,
+lookup(B) will stop early → BUG</code></pre>
+
+    <p><strong>Solution: DUMMY markers</strong></p>
+    <p>Instead of clearing: <code>slot = DUMMY</code></p>
+    <p>This preserves probe chains. Too many DUMMY slots triggers a resize.</p>
+
+    <h3>Load Factor & Resizing</h3>
+    <p>Load factor = <code>used_slots / table_size</code></p>
+    <p>Python keeps it below ~66%</p>
+
+    <p>When exceeded:</p>
+    <ul>
+        <li>Allocate new table (≈ 2× size)</li>
+        <li>Reinsert all ACTIVE entries</li>
+        <li>Drop DUMMY slots</li>
+    </ul>
+
+    <p>Cost: O(n), but amortized O(1) per operation.</p>
+
+    <h3>Why Hash Tables Beat Trees in Python</h3>
+    <table>
+        <tr>
+            <th>Structure</th>
+            <th>Access</th>
+            <th>Cache</th>
+            <th>Allocations</th>
+        </tr>
+        <tr>
+            <td>Hash table</td>
+            <td>O(1)</td>
+            <td>Excellent</td>
+            <td>Minimal</td>
+        </tr>
+        <tr>
+            <td>Tree</td>
+            <td>O(log n)</td>
+            <td>Poor</td>
+            <td>Many</td>
+        </tr>
+        <tr>
+            <td>Linked list</td>
+            <td>O(n)</td>
+            <td>Poor</td>
+            <td>Many</td>
+        </tr>
+    </table>
+
+    <p>Hash tables align perfectly with modern CPUs.</p>
+
+    <h3>Hash Randomization (Security)</h3>
+    <p>Python randomizes hash seeds at startup. This prevents attackers from crafting keys that all collide, which stopped real-world DoS attacks.</p>
+
+    <h2 id="bst">8. Self-Balancing Binary Search Trees</h2>
+
+    <h3>What are Self-Balancing Binary Search Trees?</h3>
+    <p>In computer science, a <strong>self-balancing binary search tree (BST)</strong> is any node-based binary search tree that automatically keeps its height (maximal number of levels below the root) small in the face of arbitrary item insertions and deletions.</p>
+
+    <h4>The Height Problem</h4>
+    <p>Most operations on a binary search tree (BST) take time directly proportional to the height of the tree, so it is desirable to keep the height small.</p>
+
+    <p>A binary tree with height <em>h</em> can contain at most:</p>
+    <pre><code>2^0 + 2^1 + ... + 2^h = 2^(h+1) - 1 nodes</code></pre>
+
+    <p>This implies that for any tree with <em>n</em> nodes and height <em>h</em>:</p>
+    <pre><code>n ≤ 2^(h+1) - 1
+
+Which means:
+h ≥ ⌈log₂(n+1) - 1⌉ ≥ ⌊log₂(n)⌋</code></pre>
+
+    <p>In other words, the <strong>minimum height</strong> of a binary tree with <em>n</em> nodes is <code>log₂(n)</code>, rounded down: <strong>⌊log₂(n)⌋</strong></p>
+
+    <h4>The Degenerate Case</h4>
+    <p>However, the simplest algorithms for BST item insertion may yield a tree with height <em>n</em> in rather common situations. For example, when items are inserted in <strong>sorted key order</strong>, the tree degenerates into a <strong>linked list</strong> with <em>n</em> nodes.</p>
+
+    <p>The difference in performance may be enormous:</p>
+    <pre><code>For n = 1,000,000:
+Minimum height: ⌊log₂(1,000,000)⌋ = 19
+Worst-case height: 1,000,000
+
+That's a 50,000x difference!</code></pre>
+
+    <h4>The Solution</h4>
+    <p>Self-balancing binary trees solve this problem by performing <strong>transformations</strong> (such as tree rotations) at key insertion times, to keep the height proportional to <code>log₂(n)</code>. Although a certain overhead is involved, it is not bigger than the always necessary lookup cost.</p>
+
+    <h3>Language Implementations</h3>
+    <table>
+        <tr>
+            <th>Language</th>
+            <th>Data Structure</th>
+            <th>Implementation</th>
+        </tr>
+        <tr>
+            <td><strong>C++ STL</strong></td>
+            <td><code>set</code>, <code>map</code></td>
+            <td>Red-Black Tree</td>
+        </tr>
+        <tr>
+            <td><strong>Java</strong></td>
+            <td><code>TreeSet</code>, <code>TreeMap</code></td>
+            <td>Red-Black Tree</td>
+        </tr>
+        <tr>
+            <td><strong>Python</strong></td>
+            <td>No native support</td>
+            <td>Use <code>bisect</code> module or PyPI: <code>rbtree</code>, <code>pyavl</code></td>
+        </tr>
+    </table>
+
+    <h3>Use Cases for Self-Balancing BSTs</h3>
+    <p>Self-balancing BSTs can be used in a natural way to construct and maintain:</p>
+    <ul>
+        <li><strong>Ordered lists</strong> and priority queues</li>
+        <li><strong>Associative arrays</strong> (key-value pairs with ordering based on keys)</li>
+        <li>Applications requiring <strong>ordered enumeration</strong> of items</li>
+    </ul>
+
+    <h3>Advantages vs Hash Tables</h3>
+    <ul>
+        <li><strong>Ordered traversal:</strong> Fast (O(n)) enumeration of items in key order</li>
+        <li><strong>Better worst-case:</strong> O(log n) vs O(n) for hash tables</li>
+        <li><strong>Range queries:</strong> Can efficiently find all keys in a range</li>
+        <li><strong>No hash function needed:</strong> Works with any comparable type</li>
+    </ul>
+
+    <h3>Disadvantages vs Hash Tables</h3>
+    <ul>
+        <li><strong>More complex:</strong> Lookup algorithms get complicated with duplicate keys</li>
+        <li><strong>Worse average-case:</strong> O(log n) compared to O(1) for hash tables</li>
+        <li><strong>Cache unfriendly:</strong> Pointer chasing through tree nodes</li>
+        <li><strong>More memory overhead:</strong> Need to store pointers for tree structure</li>
+    </ul>
+
+    <h2>AVL Trees</h2>
+
+    <h3>Definition</h3>
+    <p>An <strong>AVL tree</strong> is a self-balancing Binary Search Tree (BST) where the difference between heights of left and right subtrees for any node cannot be more than one.</p>
+
+    <p><strong>Balance Factor:</strong> For each node:</p>
+    <pre><code>balance_factor = height(left_subtree) - height(right_subtree)
+
+For an AVL tree: -1 ≤ balance_factor ≤ +1</code></pre>
+
+    <p>The values above nodes represent the difference between left and right subtree heights:</p>
+
+    <div style="background-color: #f9f9f9; padding: 15px; margin: 20px 0; border-left: 4px solid #1772d0;">
+        <p><strong>Example AVL Tree:</strong></p>
+        <pre><code>        12 (+1)
+       /      \
+    8 (+1)    18 (+1)
+   /   \      /
+5 (+1) 11(0) 17(0)
+/
+4(0)</code></pre>
+        <p>Each node shows its balance factor in parentheses.</p>
+    </div>
+
+    <h3>Insertion in AVL Tree</h3>
+    <p>Insertion follows the same basic rules as in a Binary Search Tree (BST):</p>
+    <ol>
+        <li>A new key is placed in its correct position based on BST rules (left < node < right)</li>
+        <li>After insertion, the <strong>balance factor</strong> of each node is checked during the path back up to the root</li>
+        <li>If any node becomes <strong>unbalanced</strong> (balance factor < -1 or > +1), a <strong>rotation</strong> is required</li>
+    </ol>
+
+    <h4>Rotation Operations</h4>
+    <p>Two basic operations can rebalance a BST without violating the BST property:</p>
+    <ul>
+        <li><strong>Left Rotation</strong></li>
+        <li><strong>Right Rotation</strong></li>
+    </ul>
+
+    <div style="background-color: #f9f9f9; padding: 15px; margin: 20px 0;">
+        <pre><code>Right Rotation:
+     y                x
+    / \              / \
+   x   T3    →     T1  y
+  / \                 / \
+ T1  T2              T2  T3
+
+Left Rotation:
+   x                  y
+  / \                / \
+ T1  y       →      x   T3
+    / \            / \
+   T2  T3         T1  T2</code></pre>
+    </div>
+
+    <h4>Four Cases for Rebalancing</h4>
+
+    <p><strong>1. Left-Left Case:</strong> Node is inserted in left subtree of left child</p>
+    <pre><code>Solution: Single right rotation at the unbalanced node
+
+       z                y
+      / \              / \
+     y   T4    →      x   z
+    / \                  / \
+   x   T3               T3  T4
+  / \
+ T1  T2</code></pre>
+
+    <p><strong>2. Left-Right Case:</strong> Node is inserted in right subtree of left child</p>
+    <pre><code>Solution: Left rotation on left child, then right rotation on root
+
+     z                z                x
+    / \              / \              / \
+   y   T4    →      x   T4     →    y   z
+  / \              / \              / \   \
+ T1  x            y   T3           T1 T2  T3 T4
+    / \          / \
+   T2  T3       T1  T2</code></pre>
+
+    <p><strong>3. Right-Right Case:</strong> Node is inserted in right subtree of right child</p>
+    <pre><code>Solution: Single left rotation at the unbalanced node
+
+   z                  y
+  / \                / \
+ T1  y       →      z   x
+    / \            / \   \
+   T2  x          T1 T2  T3 T4
+      / \
+     T3  T4</code></pre>
+
+    <p><strong>4. Right-Left Case:</strong> Node is inserted in left subtree of right child</p>
+    <pre><code>Solution: Right rotation on right child, then left rotation on root
+
+   z                z                  x
+  / \              / \                / \
+ T1  y      →     T1  x         →   z   y
+    / \              / \            / \   \
+   x   T4           T2  y          T1 T2  T3 T4
+  / \                  / \
+ T2  T3               T3  T4</code></pre>
+
+    <h3>Insertion Algorithm</h3>
+    <p>Follow these steps:</p>
+    <ol>
+        <li>Perform the normal BST insertion</li>
+        <li>Update the height of the current node (ancestor of newly inserted node)</li>
+        <li>Get the balance factor: <code>left_height - right_height</code></li>
+        <li><strong>If balance factor > 1:</strong> Left-heavy case
+            <ul>
+                <li>Compare new key with left child's key</li>
+                <li>If new key < left child key → <strong>Left-Left case</strong> → right rotate</li>
+                <li>If new key > left child key → <strong>Left-Right case</strong> → left rotate child, then right rotate</li>
+            </ul>
+        </li>
+        <li><strong>If balance factor < -1:</strong> Right-heavy case
+            <ul>
+                <li>Compare new key with right child's key</li>
+                <li>If new key > right child key → <strong>Right-Right case</strong> → left rotate</li>
+                <li>If new key < right child key → <strong>Right-Left case</strong> → right rotate child, then left rotate</li>
+            </ul>
+        </li>
+    </ol>
+
+    <h3>Time Complexity</h3>
+    <table>
+        <tr>
+            <th>Operation</th>
+            <th>Complexity</th>
+            <th>Explanation</th>
+        </tr>
+        <tr>
+            <td>Search</td>
+            <td>O(log n)</td>
+            <td>Tree height is O(log n)</td>
+        </tr>
+        <tr>
+            <td>Insert</td>
+            <td>O(log n)</td>
+            <td>Search + constant rotation operations</td>
+        </tr>
+        <tr>
+            <td>Delete</td>
+            <td>O(log n)</td>
+            <td>Search + constant rotation operations</td>
+        </tr>
+        <tr>
+            <td>Rotation</td>
+            <td>O(1)</td>
+            <td>Only pointer changes</td>
+        </tr>
+    </table>
+
+    <h3>Deletion in AVL Tree</h3>
+    <p>To ensure the tree remains AVL after deletion:</p>
+    <ol>
+        <li>Perform standard BST delete</li>
+        <li>Update heights of affected nodes</li>
+        <li>Get balance factor of each ancestor</li>
+        <li>If unbalanced, perform appropriate rotations (same cases as insertion)</li>
+    </ol>
+
+    <p><strong>Important differences from insertion:</strong></p>
+    <ul>
+        <li>Deletion may require <strong>multiple rotations</strong> up the path to root</li>
+        <li>Insertion requires at most <strong>one rotation</strong> (or two for double rotation)</li>
+    </ul>
+
+    <h3>Auxiliary Space</h3>
+    <p>O(log n) for recursion call stack (since we use recursive insertion/deletion).</p>
+
+    <h3>Why Python Doesn't Use Self-Balancing BSTs</h3>
+    <p>Python's standard library does not support self-balancing BSTs natively because:</p>
+    <ul>
+        <li><strong>Hash tables are faster:</strong> O(1) average vs O(log n)</li>
+        <li><strong>Hash tables are simpler:</strong> Less code complexity</li>
+        <li><strong>Hash tables are more cache-friendly:</strong> Better for modern CPUs</li>
+        <li><strong>Ordered iteration less common:</strong> Most use cases don't need it</li>
+        <li><strong>Alternatives exist:</strong> <code>bisect</code> module for sorted lists, or PyPI packages</li>
+    </ul>
+
+    <p><strong>When to use PyPI BST implementations (rbtree, pyavl):</strong></p>
+    <ul>
+        <li>You need guaranteed O(log n) worst-case performance</li>
+        <li>You need efficient ordered iteration</li>
+        <li>You need range queries (find all keys between x and y)</li>
+        <li>You need to find predecessor/successor of keys</li>
+    </ul>
+
+    <h2>Summary</h2>
+
+    <p><strong>Key Takeaways:</strong></p>
+    <ul>
+        <li><strong>OrderedDict:</strong> Combines hash table + doubly linked list for O(1) ordered operations</li>
+        <li><strong>HeapQ:</strong> Array-based min-heap with O(log n) push/pop and O(n) heapify</li>
+        <li><strong>Set:</strong> Hash table optimized for membership testing with O(1) average operations</li>
+        <li><strong>Dict:</strong> Compact hash table design with insertion order preservation (Python 3.7+)</li>
+        <li><strong>List:</strong> Dynamic array with over-allocation for O(1) amortized appends</li>
+        <li><strong>Deque:</strong> Doubly-linked list of blocks for O(1) operations at both ends</li>
+        <li><strong>Hash Tables:</strong> Use open addressing with perturbation probing for excellent cache performance</li>
+        <li><strong>Python's Philosophy:</strong> Prioritize cache-friendly, allocation-light data structures over theoretical complexity</li>
+    </ul>
+
+    <h2>Quick Reference Table</h2>
+    <table>
+        <tr>
+            <th>Data Structure</th>
+            <th>Best For</th>
+            <th>Worst Operation</th>
+            <th>Memory</th>
+        </tr>
+        <tr>
+            <td><strong>List</strong></td>
+            <td>Random access, iteration</td>
+            <td>Insert/delete in middle: O(n)</td>
+            <td>Contiguous, over-allocated</td>
+        </tr>
+        <tr>
+            <td><strong>Deque</strong></td>
+            <td>Queue, stack operations</td>
+            <td>Random access: O(n)</td>
+            <td>Blocks of 64 elements</td>
+        </tr>
+        <tr>
+            <td><strong>Dict</strong></td>
+            <td>Key-value mapping</td>
+            <td>Worst-case lookup: O(n)</td>
+            <td>Sparse indices + dense entries</td>
+        </tr>
+        <tr>
+            <td><strong>Set</strong></td>
+            <td>Membership testing, uniqueness</td>
+            <td>Worst-case lookup: O(n)</td>
+            <td>Hash table, no values</td>
+        </tr>
+        <tr>
+            <td><strong>OrderedDict</strong></td>
+            <td>Ordered key-value, LRU cache</td>
+            <td>Extra memory for linked list</td>
+            <td>Dict + doubly linked list</td>
+        </tr>
+        <tr>
+            <td><strong>HeapQ</strong></td>
+            <td>Priority queue, top-k problems</td>
+            <td>Not for random access</td>
+            <td>Just a list</td>
+        </tr>
+    </table>
+
+    <p>Understanding these internals helps you write more efficient Python code and make better decisions about which data structure to use for your specific use case.</p>
+
+</body>
+</html>
