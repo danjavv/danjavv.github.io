@@ -167,6 +167,42 @@
       </td>
     </tr>
 
+    <tr onmouseout="docrag_stop()" onmouseover="docrag_start()">
+      <td style="padding:16px;width:20%;vertical-align:middle">
+        <div class="one">
+          <div class="two" id='docrag_image'>
+            <img src='images/rag.png' width=100%>
+          </div>
+          <img src='images/rag.png' width=100%>
+        </div>
+        <script type="text/javascript">
+          function docrag_start() {
+            document.getElementById('docrag_image').style.opacity = "1";
+          }
+
+          function docrag_stop() {
+            document.getElementById('docrag_image').style.opacity = "0";
+          }
+          docrag_stop()
+        </script>
+      </td>
+      <td style="padding:8px;width:80%;vertical-align:middle">
+        <a href="https://github.com/danjavv/DocumentRAG">
+          <span class="papertitle">Document RAG System</span>
+        </a>
+        <br>
+        <strong>Danish Javed</strong>
+        <br>
+        <em>Python, FastAPI, ChromaDB, Google Gemini, Sentence-Transformers, Next.js</em>, 2025
+        <br>
+        <a href="https://github.com/danjavv/DocumentRAG">GitHub</a>
+        <p></p>
+        <p>
+          Built a full-stack end-to-end RAG pipeline for procurement documents: extracted structured fields from PDFs using regex with Gemini LLM fallback, embedded them via Sentence-Transformers into a ChromaDB vector store, and served a Next.js chat interface over a FastAPI backend with source attribution.
+        </p>
+      </td>
+    </tr>
+
     <tr onmouseout="ffi_stop()" onmouseover="ffi_start()">
       <td style="padding:16px;width:20%;vertical-align:middle">
         <div class="one">
